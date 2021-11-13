@@ -5,50 +5,28 @@ const BODY_DENSITY: number = 1.0;
 
 /**
  * Represents a body in the simulation.
- *
- * Density = 3/4pi
- * Volume = 4pi/3 r^3
- * Mass = Volume * Density = K1 * r^3
- * r = Mass^(1/3)
- *
  */
 export class Body {
-  /** Body's position. */
-  private position: Vec2;
-  /** Body's velocity. */
-  private velocity: Vec2;
   /** Body's mass. */
   private mass: number;
   /** Body's radius. */
   private radius: number;
+  /** Body's position. */
+  private position: Vec2;
+  /** Body's velocity. */
+  private velocity: Vec2;
 
   /**
+   * @param mass The body's initial mass.
    * @param position The body's initial position.
    * @param velocity The body's initial velocity.
-   * @param mass The body's initial mass.
    */
-  constructor(position: Vec2, velocity: Vec2, mass: number) {
-    this.position = position;
-    this.velocity = velocity;
+  constructor(mass: number, position: Vec2, velocity: Vec2) {
     this.mass = 0.0;
     this.radius = 0.0;
+    this.position = position;
+    this.velocity = velocity;
     this.setMass(mass);
-  }
-
-  /**
-   * Gets the body's position.
-   * @returns The 2D vector which represents the body's position.
-   */
-  public getPosition(): Vec2 {
-    return this.position;
-  }
-
-  /**
-   * Gets the body's velocity.
-   * @returns The body's velocity.
-   */
-  public getVelocity(): Vec2 {
-    return this.velocity;
   }
 
   /**
@@ -65,6 +43,22 @@ export class Body {
    */
   public getRadius(): number {
     return this.radius;
+  }
+
+  /**
+   * Gets the body's position.
+   * @returns The 2D vector which represents the body's position.
+   */
+  public getPosition(): Vec2 {
+    return this.position;
+  }
+
+  /**
+   * Gets the body's velocity.
+   * @returns The body's velocity.
+   */
+  public getVelocity(): Vec2 {
+    return this.velocity;
   }
 
   /**
@@ -102,5 +96,17 @@ export class Body {
     const sqrDistance = this.position.sub(other.position).sqrLength();
     const sqrRadius = (this.radius + other.radius) ** 2;
     return sqrDistance <= sqrRadius;
+  }
+
+  /**
+   * Merges this body with another.
+   * @param other The other body.
+   * @returns The new body.
+   */
+  public merge(other: Body): Body {
+    const mass = this.mass + other.mass;
+    const position = this.position.add(other.position).div(2.0);
+    const velocity = this.velocity.div(mass).add(other.velocity.div(mass)).mul(mass);
+    return new Body(mass, position, velocity);
   }
 }
