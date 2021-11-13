@@ -71,16 +71,24 @@ export class Body {
    * Sets the body's mass.
    * @param mass The body's new mass.
    */
-  public setMass(mass: number) {
+  public setMass(mass: number): void {
     this.mass = mass;
     this.radius = (3.0 / 4.0) * Math.PI * (this.radius ** (1.0 / 3.0)) / BODY_DENSITY;
+  }
+
+  /**
+   * Applies a force to the body.
+   * @param force The force to apply to the body.
+   */
+  public applyForce(force: Vec2): void {
+    this.velocity = this.velocity.add(force.div(this.mass));
   }
 
   /**
    * Updates the body's position.
    * @param dt The time step.
    */
-  public update(dt: number) {
+  public update(dt: number): void {
     this.position = this.position.add(this.velocity.mul(dt));
   }
 
