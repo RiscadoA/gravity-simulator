@@ -1,6 +1,7 @@
 { pkgs ? import <nixpkgs> {} }:
 with pkgs; mkShell {
   nativeBuildInputs = [
+    clang-tools
     nodejs
   ];
 

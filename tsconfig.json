@@ -8,18 +8,22 @@
         "sourceMap": true,
         "declaration": true,
         "jsx": "preserve",
-        "lib": [
-            "es2017",
-            "dom",
-        ],
         "strict": true,
         "noUnusedLocals": true,
         "noUnusedParameters": true,
         "noImplicitReturns": true,
         "noFallthroughCasesInSwitch": true,
+        "lib": [
+            "es2017",
+            "dom",
+        ],
+        "typeRoots": [
+            "node_modules/@types"
+        ]
     },
     "include": [
-        "src/**/*"
+        "src/**/*",
+        "node_modules/@types"
     ],
     "exclude": [
         ".git",

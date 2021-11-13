@@ -2,7 +2,10 @@
   "name": "gravity-simulator",
   "version": "1.0.0",
   "description": "A gravity simulator",
-  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RiscadoA/gravity-simulator.git"
+  },
   "files": [
     "src/"
   ],
@@ -18,5 +21,8 @@
     "gh-pages": "^3.2.3",
     "parcel": "^2.0.1",
     "typescript": "^4.4.4"
+  },
+  "dependencies": {
+    "pixi.js": "^6.2.0"
   }
 }
