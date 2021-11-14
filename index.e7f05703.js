@@ -546,7 +546,7 @@ class App {
    * Updates the application.
    * @param dt Time step in seconds.
    */ update(dt) {
-        this.world.update(dt * TIME_SCALE);
+        for(let i = 0; i < 100; ++i)this.world.update(dt * TIME_SCALE);
     }
     /**
    * Zooms the view in.
