@@ -13,6 +13,7 @@
         "noUnusedParameters": true,
         "noImplicitReturns": true,
         "noFallthroughCasesInSwitch": true,
+        "strictPropertyInitialization": false,
         "lib": [
             "es2017",
             "dom",
