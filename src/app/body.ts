@@ -1,7 +1,8 @@
 import {Vec2} from './math';
+import {Color} from './renderer/color';
 
 /** The density of bodies. */
-const BODY_DENSITY: number = 1.0;
+const BODY_DENSITY: number = 100.0;
 
 /**
  * Represents a body in the simulation.
@@ -15,18 +16,20 @@ export class Body {
   private position: Vec2;
   /** Body's velocity. */
   private velocity: Vec2;
+  /** Body's color. */
+  private color: Color;
 
   /**
    * @param mass The body's initial mass.
    * @param position The body's initial position.
    * @param velocity The body's initial velocity.
+   * @param color The body's color.
    */
-  constructor(mass: number, position: Vec2, velocity: Vec2) {
-    this.mass = 0.0;
-    this.radius = 0.0;
+  constructor(mass: number, position: Vec2, velocity: Vec2, color: Color) {
+    this.setMass(mass);
     this.position = position;
     this.velocity = velocity;
-    this.setMass(mass);
+    this.color = color;
   }
 
   /**
@@ -62,20 +65,29 @@ export class Body {
   }
 
   /**
+   * Gets the body's color.
+   * @return The body's color.
+   */
+  public getColor(): Color {
+    return this.color;
+  }
+
+  /**
    * Sets the body's mass.
    * @param mass The body's new mass.
    */
   public setMass(mass: number): void {
     this.mass = mass;
-    this.radius = (3.0 / 4.0) * Math.PI * (this.radius ** (1.0 / 3.0)) / BODY_DENSITY;
+    this.radius = (3.0 / 4.0) * Math.PI * (this.mass ** (1.0 / 3.0)) / BODY_DENSITY;
   }
 
   /**
    * Applies a force to the body.
    * @param force The force to apply to the body.
+   * @param dt The time step.
    */
-  public applyForce(force: Vec2): void {
-    this.velocity = this.velocity.add(force.div(this.mass));
+  public applyForce(force: Vec2, dt: number): void {
+    this.velocity = this.velocity.add(force.mul(dt / this.mass));
   }
 
   /**
@@ -105,8 +117,12 @@ export class Body {
    */
   public merge(other: Body): Body {
     const mass = this.mass + other.mass;
-    const position = this.position.add(other.position).div(2.0);
-    const velocity = this.velocity.div(mass).add(other.velocity.div(mass)).mul(mass);
-    return new Body(mass, position, velocity);
+    const position = this.mass > other.mass ? this.position : other.position;
+    const velocity = this.velocity.mul(this.mass).add(other.velocity.mul(other.mass)).div(mass);
+
+    const colorA = this.color.mul(this.mass / mass);
+    const colorB = other.color.mul(other.mass / mass);
+    const color = colorA.add(colorB);
+    return new Body(mass, position, velocity, color);
   }
 }
