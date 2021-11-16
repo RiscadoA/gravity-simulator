@@ -1,12 +1,15 @@
-import {Vec2, Mat3} from '../math';
-import {View} from './view';
+import {Mat3, Vec2} from '../math';
+
 import {Color} from './color';
 import {DrawCircle} from './draw_circle';
+import {View} from './view';
+
+export {View};
 
 type DrawCommand = DrawCircle;
 
 /** Background color of the application. */
-const BACKGROUND_COLOR: Color = new Color(0.0, 0.0, 0.0);
+const BACKGROUND_COLOR: Color = new Color(0.05, 0.05, 0.05);
 
 /** Number of divisions used for drawing circles. */
 const CIRCLE_DIVISIONS: number = 32;
@@ -19,7 +22,10 @@ export class Renderer {
   private commands: DrawCommand[];
 
   /** View used. */
-  private view: View;
+  public view: View;
+
+  /** HTML canvas. */
+  private canvas: HTMLCanvasElement;
 
   /** WebGL context. */
   private context: WebGLRenderingContext;
@@ -55,14 +61,15 @@ export class Renderer {
     this.commands = [];
 
     // Get the WebGL context.
-    this.context = canvas.getContext('webgl')!;
+    this.canvas = canvas;
+    this.context = this.canvas.getContext('webgl')!;
 
     // Initialize shaders and vertex buffers.
     this.initShaders();
     this.initVertexBuffers();
 
     // Initialize view.
-    this.view = new View(canvas.width, canvas.height);
+    this.view = new View(this.canvas.width, this.canvas.height);
   }
 
   /**
@@ -73,22 +80,6 @@ export class Renderer {
    */
   public drawCircle(center: Vec2, radius: number, color: Color): void {
     this.commands.push(new DrawCircle(center, radius, color));
-  }
-
-  /**
-   * Zooms the view in.
-   * @param factor The zoom factor.
-   */
-  public zoom(factor: number): void {
-    this.view.zoom(factor);
-  }
-
-  /**
-   * Moves the view.
-   * @param delta The delta to move the view by.
-   */
-   public move(delta: Vec2): void {
-    this.view.move(delta);
   }
 
   /**
