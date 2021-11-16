@@ -2,22 +2,22 @@ import {Vec2} from './math';
 import {Color} from './renderer/color';
 
 /** The density of bodies. */
-const BODY_DENSITY: number = 100.0;
+const BODY_DENSITY: number = 200.0;
 
 /**
  * Represents a body in the simulation.
  */
 export class Body {
   /** Body's mass. */
-  private mass: number;
+  private _mass: number;
   /** Body's radius. */
-  private radius: number;
+  private _radius: number;
   /** Body's position. */
-  private position: Vec2;
+  private _position: Vec2;
   /** Body's velocity. */
-  private velocity: Vec2;
+  private _velocity: Vec2;
   /** Body's color. */
-  private color: Color;
+  public color: Color;
 
   /**
    * @param mass The body's initial mass.
@@ -25,60 +25,61 @@ export class Body {
    * @param velocity The body's initial velocity.
    * @param color The body's color.
    */
-  constructor(mass: number, position: Vec2, velocity: Vec2, color: Color) {
-    this.setMass(mass);
-    this.position = position;
-    this.velocity = velocity;
-    this.color = color;
-  }
-
-  /**
-   * Gets the body's mass.
-   * @returns The body's mass.
-   */
-  public getMass(): number {
-    return this.mass;
-  }
-
-  /**
-   * Gets the body's radius.
-   * @returns The body's radius.
-   */
-  public getRadius(): number {
-    return this.radius;
+  constructor() {
+    this.mass = 1.0;
+    this.position = new Vec2(0.0, 0.0);
+    this.velocity = new Vec2(0.0, 0.0);
+    this.color = Color.random();
   }
 
   /**
    * Gets the body's position.
-   * @returns The 2D vector which represents the body's position.
    */
-  public getPosition(): Vec2 {
-    return this.position;
+  public get position(): Vec2 {
+    return this._position;
+  }
+
+  /**
+   * Sets the body's position.
+   */
+  public set position(position: Vec2) {
+    this._position = new Vec2(position.x, position.y);
   }
 
   /**
    * Gets the body's velocity.
-   * @returns The body's velocity.
    */
-  public getVelocity(): Vec2 {
-    return this.velocity;
+   public get velocity(): Vec2 {
+    return this._velocity;
   }
 
   /**
-   * Gets the body's color.
-   * @return The body's color.
+   * Sets the body's velocity.
    */
-  public getColor(): Color {
-    return this.color;
+  public set velocity(velocity: Vec2) {
+    this._velocity = new Vec2(velocity.x, velocity.y);
+  }
+  
+  /**
+   * Gets the body's mass.
+   */
+  public get mass(): number {
+    return this._mass;
   }
 
   /**
    * Sets the body's mass.
-   * @param mass The body's new mass.
    */
-  public setMass(mass: number): void {
-    this.mass = mass;
-    this.radius = (3.0 / 4.0) * Math.PI * (this.mass ** (1.0 / 3.0)) / BODY_DENSITY;
+  public set mass(mass: number) {
+    this._mass = mass;
+    this._radius = (3.0 / 4.0) * Math.PI * (this.mass ** (1.0 / 3.0)) / BODY_DENSITY;
+  }
+
+  /**
+   * Gets the body's radius.
+   */
+  public get radius(): number {
+    return this._radius;
   }
 
   /**
@@ -87,7 +88,15 @@ export class Body {
    * @param dt The time step.
    */
   public applyForce(force: Vec2, dt: number): void {
-    this.velocity = this.velocity.add(force.mul(dt / this.mass));
+    this.applyImpulse(force.mul(dt));
+  }
+
+  /**
+   * Applies an impulse to the body.
+   * @param impulse The impulse to apply to the body.
+   */
+  public applyImpulse(impulse: Vec2): void {
+    this.velocity = this.velocity.add(impulse.mul(1.0 / this.mass));
   }
 
   /**
@@ -99,15 +108,29 @@ export class Body {
   }
 
   /**
-   * Checks if this body is colliding with another.
+   * Checks if this body is intersecting with another.
    * @param other The other body.
-   * @returns Whether the bodies are colliding.
+   * @returns Whether the bodies are intersecting.
    */
-  public collides(other: Body): boolean {
-    // The square of the distance is used to avoid calculating the square root.
-    const sqrDistance = this.position.sub(other.position).sqrLength();
-    const sqrRadius = (this.radius + other.radius) ** 2;
-    return sqrDistance <= sqrRadius;
+  public intersects(other: Body): boolean;
+
+  /**
+   * Checks if the body is intersecting with a point.
+   * @param point The point.
+   * @returns Whether the body is intersecting with the point.
+   */
+  public intersects(point: Vec2): boolean;
+
+  // Implementation
+  public intersects(other: Body|Vec2): boolean {
+    if (other instanceof Body) {
+      // The square of the distance is used to avoid calculating the square root.
+      const sqrDistance = this.position.sub(other.position).sqrLength();
+      const sqrRadius = (this.radius + other.radius) ** 2;
+      return sqrDistance <= sqrRadius;
+    } else {  // other is a Vec2
+      return this.position.sub(other).sqrLength() <= this.radius ** 2;
+    }
   }
 
   /**
@@ -116,13 +139,16 @@ export class Body {
    * @returns The new body.
    */
   public merge(other: Body): Body {
-    const mass = this.mass + other.mass;
-    const position = this.mass > other.mass ? this.position : other.position;
-    const velocity = this.velocity.mul(this.mass).add(other.velocity.mul(other.mass)).div(mass);
+    let b = new Body();
 
-    const colorA = this.color.mul(this.mass / mass);
-    const colorB = other.color.mul(other.mass / mass);
-    const color = colorA.add(colorB);
-    return new Body(mass, position, velocity, color);
+    b.mass = this.mass + other.mass;
+    b.position = this.position.mul(this.mass).add(other.position.mul(other.mass)).div(b.mass);
+    b.velocity = this.velocity.mul(this.mass).add(other.velocity.mul(other.mass)).div(b.mass);
+
+    const colorA = this.color.mul(this.mass / b.mass);
+    const colorB = other.color.mul(other.mass / b.mass);
+    b.color = colorA.add(colorB);
+
+    return b;
   }
 }
