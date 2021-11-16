@@ -132,13 +132,10 @@ export class App {
 
     // Initialie presets
     this.presets = new Map<string, Presets.Preset>();
-    this.presets.set('empty', new Presets.Empty());
-    this.preset = this.presets.get('empty');
+    this.preset = undefined;
     this.resetButton.setOnClick(() => {
-      if (this.preset) {
-        this.world.clear();
-        this.preset.generate(this.world);
-      }
+      this.world.clear();
+      if (this.preset) this.preset.generate(this.world);
     });
 
     // Create a few bodies.
