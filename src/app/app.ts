@@ -1,10 +1,9 @@
-import {Body} from './body';
-import {Mat3, Vec2} from './math';
+import {Vec2} from './math';
+import * as Presets from './presets';
 import {Renderer} from './renderer';
-import {Color} from './renderer/color';
 import * as Tools from './tools';
 import * as UI from './ui';
-import {GRAVITY_CONSTANT, World} from './world';
+import {World} from './world';
 
 /** Multiplier of the time step passed to the update functions. */
 const TIME_SCALE = 0.00001;
@@ -19,11 +18,17 @@ export class App {
   /** Physics world. */
   private world: World;
 
-  /** Tools array. */
+  /** Tools map. */
   private tools: Map<string, Tools.Tool>;
 
   /** Current tool. */
   private tool: Tools.Tool|undefined;
+
+  /** Presets map. */
+  private presets: Map<string, Presets.Preset>;
+
+  /** Current preset. */
+  private preset: Presets.Preset|undefined;
 
   /** Reset button. */
   private resetButton: UI.Button;
@@ -123,6 +128,17 @@ export class App {
     this.toolSwitch.setOnStateChange(tool => {
       this.tool = this.tools.get(tool);
       if (this.tool) this.tool.activate();
+    });
+
+    // Initialie presets
+    this.presets = new Map<string, Presets.Preset>();
+    this.presets.set('empty', new Presets.Empty());
+    this.preset = this.presets.get('empty');
+    this.resetButton.setOnClick(() => {
+      if (this.preset) {
+        this.world.clear();
+        this.preset.generate(this.world);
+      }
     });
 
     // Create a few bodies.
