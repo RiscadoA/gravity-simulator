@@ -467,6 +467,25 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 // Initialize app
 const app = new _app.App(canvas);
+// Add speed range event
+const speedRange = document.getElementById('speedInput');
+const speedValue = document.getElementById('speedValue');
+speedRange.addEventListener('input', ()=>{
+    const speed = Math.pow(10, parseFloat(speedRange.value));
+    speedValue.innerText = speed.toFixed(2);
+    app.setSpeed(speed);
+});
+speedRange.value = 0..toFixed(2);
+speedRange.dispatchEvent(new Event('input'));
+// Add mass range event
+const massRange = document.getElementById('massInput');
+const massValue = document.getElementById('massValue');
+massRange.addEventListener('input', ()=>{
+    const mass = Math.pow(10, parseFloat(massRange.value));
+    massValue.innerText = mass.toExponential(1);
+});
+massRange.value = 1..toExponential(1);
+massRange.dispatchEvent(new Event('input'));
 // Add drag event
 let dragging = false;
 let lastMousePos = new _math.Vec2(0, 0);
@@ -502,8 +521,7 @@ let lastTime = 0;
 function step(currentTime) {
     const dt = currentTime - lastTime;
     lastTime = currentTime;
-    app.update(dt);
-    app.draw();
+    app.animate(dt / 1000);
     window.requestAnimationFrame(step);
 }
 window.requestAnimationFrame(step);
@@ -511,12 +529,14 @@ window.requestAnimationFrame(step);
 },{"./app/app":"dOyN2","./app/math":"9zUrS"}],"dOyN2":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "App", ()=>App
+/**
+ * Application class.
+ */ parcelHelpers.export(exports, "App", ()=>App
 );
 var _math = require("./math");
 var _renderer = require("./renderer");
 var _world = require("./world");
-/** Multiplier of the time step passed to the update functions. */ const TIME_SCALE = 0.001;
+/** Multiplier of the time step passed to the update functions. */ const TIME_SCALE = 10;
 class App {
     /**
    * @param canvas HTML element to attach the application to.
@@ -525,28 +545,27 @@ class App {
         this.renderer = new _renderer.Renderer(canvas);
         // Create physics world.
         this.world = new _world.World();
+        this.speed = 1;
         // Create a few bodies.
-        const CENTRAL_MASS = 10000;
+        const CENTRAL_MASS = 1000;
+        // this.world.addBody(1000000.0, new Vec2(-100.0, 0.0), new Vec2(0.1, 0.2));
         this.world.addBody(CENTRAL_MASS, new _math.Vec2(0, 0), new _math.Vec2(0, 0));
-        for(let i = 0; i < 1000; ++i){
-            const angle = Math.random() * Math.PI * 2;
-            const radius = Math.random() * 7 + 1;
-            const pos = new _math.Vec2(Math.cos(angle) * radius, Math.sin(angle) * radius);
-            const vel = pos.perpendicular().normalize().mul(Math.sqrt(_world.GRAVITY_CONSTANT * CENTRAL_MASS / radius));
-            this.world.addBody(1, pos, vel);
+        for(let i = 0; i < 100; ++i){
+            const mass = 0.1;
+            const angle = i / 100 * Math.PI * 2;
+            const distance = 1;
+            const pos = new _math.Vec2(Math.cos(angle) * distance, Math.sin(angle) * distance);
+            const vel = pos.perpendicular().normalize().mul(Math.sqrt(_world.GRAVITY_CONSTANT * CENTRAL_MASS / distance));
+            this.world.addBody(mass, pos, vel);
         }
     }
     /**
-   * Draws the application.
-   */ draw() {
+   * Updates and draws the application.
+   * @param dt Time step in seconds.
+   */ animate(dt) {
+        this.world.update(this.speed * dt * TIME_SCALE);
         this.world.draw(this.renderer);
         this.renderer.flush();
-    }
-    /**
-   * Updates the application.
-   * @param dt Time step in seconds.
-   */ update(dt) {
-        for(let i = 0; i < 100; ++i)this.world.update(dt * TIME_SCALE);
     }
     /**
    * Zooms the view in.
@@ -560,306 +579,15 @@ class App {
    */ move(delta) {
         this.renderer.move(delta);
     }
-}
-
-},{"./renderer":"bK5TX","./world":"8br0T","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV","./math":"9zUrS"}],"bK5TX":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-/**
- * Class used to render the app.
- */ parcelHelpers.export(exports, "Renderer", ()=>Renderer
-);
-var _math = require("../math");
-var _view = require("./view");
-var _color = require("./color");
-var _drawCircle = require("./draw_circle");
-/** Background color of the application. */ const BACKGROUND_COLOR = new _color.Color(0, 0, 0);
-/** Number of divisions used for drawing circles. */ const CIRCLE_DIVISIONS = 32;
-class Renderer {
     /**
-   * @param canvas Canvas to use.
-   */ constructor(canvas){
-        this.commands = [];
-        // Get the WebGL context.
-        this.context = canvas.getContext('webgl');
-        // Initialize shaders and vertex buffers.
-        this.initShaders();
-        this.initVertexBuffers();
-        // Initialize view.
-        this.view = new _view.View(canvas.width, canvas.height);
-    }
-    /**
-   * Draws a circle.
-   * @param center The center of the circle.
-   * @param radius The radius of the circle.
-   * @param color The color of the circle.
-   */ drawCircle(center, radius, color) {
-        this.commands.push(new _drawCircle.DrawCircle(center, radius, color));
-    }
-    /**
-   * Zooms the view in.
-   * @param factor The zoom factor.
-   */ zoom(factor) {
-        this.view.zoom(factor);
-    }
-    /**
-   * Moves the view.
-   * @param delta The delta to move the view by.
-   */ move(delta) {
-        this.view.move(delta);
-    }
-    /**
-   * Flushes the renderer, showing the current state of the app.
-   */ flush() {
-        // Clear the screen with the background color.
-        this.context.clearColor(BACKGROUND_COLOR.r, BACKGROUND_COLOR.g, BACKGROUND_COLOR.b, 1);
-        this.context.clear(this.context.COLOR_BUFFER_BIT);
-        // Execute all draw commands.
-        this.context.bindBuffer(this.context.ARRAY_BUFFER, this.vertexBuffer);
-        this.context.vertexAttribPointer(this.positionAttribute, 2, this.context.FLOAT, false, 0, 0);
-        this.context.enableVertexAttribArray(this.positionAttribute);
-        this.context.useProgram(this.program);
-        for (let command of this.commands)if (command instanceof _drawCircle.DrawCircle) {
-            const translation = _math.Mat3.translation(command.center);
-            const scale = _math.Mat3.scale(new _math.Vec2(command.radius, command.radius));
-            const transform = scale.mul(translation).mul(this.view.getTransform());
-            this.context.uniformMatrix3fv(this.transformUniform, false, transform.elements);
-            this.context.uniform3f(this.colorUniform, command.color.r, command.color.g, command.color.b);
-            this.context.drawArrays(this.context.TRIANGLE_FAN, this.circle[0], this.circle[1]);
-        }
-        this.commands = [];
-    }
-    /**
-   * Initializes shaders used for drawing.
-   */ initShaders() {
-        // Create vertex shader.
-        this.vertexShader = this.context.createShader(this.context.VERTEX_SHADER);
-        this.context.shaderSource(this.vertexShader, `
-      attribute vec2 position;
-
-      uniform mat3 transform;
-
-      void main() {
-        vec2 transformed = (transform * vec3(position, 1.0)).xy;
-        gl_Position = vec4(transformed, 0.0, 1.0);
-      }
-    `);
-        this.context.compileShader(this.vertexShader);
-        // Create fragment shader.
-        this.fragmentShader = this.context.createShader(this.context.FRAGMENT_SHADER);
-        this.context.shaderSource(this.fragmentShader, `
-      uniform mediump vec3 color;
-
-      void main() {
-        gl_FragColor = vec4(color, 1.0);
-      }
-    `);
-        this.context.compileShader(this.fragmentShader);
-        // Create shader program.
-        this.program = this.context.createProgram();
-        this.context.attachShader(this.program, this.vertexShader);
-        this.context.attachShader(this.program, this.fragmentShader);
-        this.context.linkProgram(this.program);
-        // Get shader program attribute locations.
-        this.positionAttribute = this.context.getAttribLocation(this.program, 'position');
-        // Get shader program uniform locations.
-        this.transformUniform = this.context.getUniformLocation(this.program, 'transform');
-        this.colorUniform = this.context.getUniformLocation(this.program, 'color');
-    }
-    /**
-   * Initializes vertex buffers used for drawing.
-   */ initVertexBuffers() {
-        // Generate circle vertices
-        this.circle = [
-            0,
-            CIRCLE_DIVISIONS + 2
-        ];
-        let vertices = [];
-        vertices.push(0, 0);
-        for(let i = 0; i <= CIRCLE_DIVISIONS; i++){
-            let angle = i / CIRCLE_DIVISIONS * Math.PI * 2;
-            vertices.push(Math.cos(angle), Math.sin(angle));
-        }
-        // Generate vertex buffer
-        this.vertexBuffer = this.context.createBuffer();
-        this.context.bindBuffer(this.context.ARRAY_BUFFER, this.vertexBuffer);
-        this.context.bufferData(this.context.ARRAY_BUFFER, new Float32Array(vertices), this.context.STATIC_DRAW);
+   * Sets the simulation speed.
+   * @param speed The new simulation speed.
+   */ setSpeed(speed) {
+        this.speed = speed;
     }
 }
 
-},{"./color":"ak01f","./draw_circle":"fpeFl","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV","./view":"l5tb4","../math":"9zUrS"}],"ak01f":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-/**
- * Describes a color.
- */ parcelHelpers.export(exports, "Color", ()=>Color
-);
-class Color {
-    /**
-   * @param r The red component of the color.
-   * @param g The green component of the color.
-   * @param b The blue component of the color.
-   * @param a The alpha component of the color.
-   */ constructor(r, g, b, a = 1){
-        this.r = r;
-        this.g = g;
-        this.b = b;
-        this.a = a;
-    }
-    /**
-   * Adds the given color to this color, returning a new color.
-   * @param other The color to add.
-   * @returns The new color.
-   */ add(other) {
-        const r = Math.min(1, this.r + other.r);
-        const g = Math.min(1, this.g + other.g);
-        const b = Math.min(1, this.b + other.b);
-        const a = Math.min(1, this.a + other.a);
-        return new Color(r, g, b, a);
-    }
-    /**
-   * Mixes this color with the given color, returning a new color.
-   * @param other The color to mix with.
-   * @returns The new color.
-   */ mix(other1) {
-        const r = (this.r + other1.r) / 2;
-        const g = (this.g + other1.g) / 2;
-        const b = (this.b + other1.b) / 2;
-        const a = (this.a + other1.a) / 2;
-        return new Color(r, g, b, a);
-    }
-    /**
-   * Multiplies this color by a scalar, returning a new color.
-   * @param multiplier The scalar to multiply by.
-   * @returns The new color.
-   */ mul(multiplier) {
-        const r = Math.min(1, this.r * multiplier);
-        const g = Math.min(1, this.g * multiplier);
-        const b = Math.min(1, this.b * multiplier);
-        return new Color(r, g, b, this.a);
-    }
-    /**
-   * Divides this color by a scalar, returning a new color.
-   * @param divider The scalar to divide by.
-   * @returns The new color.
-   */ div(divider) {
-        return this.mul(1 / divider);
-    }
-    /**
-   * Generates a random color.
-   * @returns A random color.
-   */ static random() {
-        return new Color(Math.random(), Math.random(), Math.random());
-    }
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"ciiiV":[function(require,module,exports) {
-exports.interopDefault = function(a) {
-    return a && a.__esModule ? a : {
-        default: a
-    };
-};
-exports.defineInteropFlag = function(a) {
-    Object.defineProperty(a, '__esModule', {
-        value: true
-    });
-};
-exports.exportAll = function(source, dest) {
-    Object.keys(source).forEach(function(key) {
-        if (key === 'default' || key === '__esModule' || dest.hasOwnProperty(key)) return;
-        Object.defineProperty(dest, key, {
-            enumerable: true,
-            get: function() {
-                return source[key];
-            }
-        });
-    });
-    return dest;
-};
-exports.export = function(dest, destName, get) {
-    Object.defineProperty(dest, destName, {
-        enumerable: true,
-        get: get
-    });
-};
-
-},{}],"fpeFl":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-/**
- * Represents a command used to draw a circle.
- */ parcelHelpers.export(exports, "DrawCircle", ()=>DrawCircle
-);
-class DrawCircle {
-    /**
-   * @param center Position of the circle center. 
-   * @param radius Radius of the circle.
-   * @param color Color of the circle.
-   */ constructor(center, radius, color){
-        this.center = center;
-        this.radius = radius;
-        this.color = color;
-    }
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"l5tb4":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-/**
- * A view is a 2D camera that can be used to render a scene.
- */ parcelHelpers.export(exports, "View", ()=>View
-);
-var _math = require("../math");
-class View {
-    // Default constructor
-    constructor(width, height){
-        this.position = new _math.Vec2(0, 0);
-        this.scale = 1;
-        this.aspectRatio = height / width;
-        this.updateTransform();
-    }
-    /**
-   * Gets the transform matrix.
-   * @returns The transform matrix.
-   */ getTransform() {
-        return this.transform;
-    }
-    /**
-   * Sets the view's position.
-   * @param position The new position.
-   */ setPosition(position) {
-        this.position = position;
-        this.updateTransform();
-    }
-    /**
-   * Sets the view's scale.
-   * @param scale The new scale.
-   */ setScale(scale) {
-        this.scale = scale;
-        this.updateTransform();
-    }
-    /**
-   * Moves the view by a given amount.
-   * @param delta The amount to move.
-   */ move(delta) {
-        this.setPosition(this.position.add(delta.div(this.scale)));
-    }
-    /**
-   * Zooms the view in.
-   * @param factor The zoom factor.
-   */ zoom(multiplier) {
-        this.setScale(this.scale / multiplier);
-    }
-    /**
-   * Updates the transform matrix.
-   */ updateTransform() {
-        const translation = _math.Mat3.translation(new _math.Vec2(this.position.x, this.position.y));
-        const scale = _math.Mat3.scale(new _math.Vec2(this.scale * this.aspectRatio, this.scale));
-        this.transform = translation.mul(scale);
-    }
-}
-
-},{"../math":"9zUrS","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"9zUrS":[function(require,module,exports) {
+},{"./math":"9zUrS","./renderer":"bK5TX","./world":"8br0T","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"9zUrS":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 /**
@@ -1028,6 +756,303 @@ class Mat3 {
     }
 }
 
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"ciiiV":[function(require,module,exports) {
+exports.interopDefault = function(a) {
+    return a && a.__esModule ? a : {
+        default: a
+    };
+};
+exports.defineInteropFlag = function(a) {
+    Object.defineProperty(a, '__esModule', {
+        value: true
+    });
+};
+exports.exportAll = function(source, dest) {
+    Object.keys(source).forEach(function(key) {
+        if (key === 'default' || key === '__esModule' || dest.hasOwnProperty(key)) return;
+        Object.defineProperty(dest, key, {
+            enumerable: true,
+            get: function() {
+                return source[key];
+            }
+        });
+    });
+    return dest;
+};
+exports.export = function(dest, destName, get) {
+    Object.defineProperty(dest, destName, {
+        enumerable: true,
+        get: get
+    });
+};
+
+},{}],"bK5TX":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * Class used to render the app.
+ */ parcelHelpers.export(exports, "Renderer", ()=>Renderer
+);
+var _math = require("../math");
+var _view = require("./view");
+var _color = require("./color");
+var _drawCircle = require("./draw_circle");
+/** Background color of the application. */ const BACKGROUND_COLOR = new _color.Color(0.05, 0.05, 0.05);
+/** Number of divisions used for drawing circles. */ const CIRCLE_DIVISIONS = 32;
+class Renderer {
+    /**
+   * @param canvas Canvas to use.
+   */ constructor(canvas){
+        this.commands = [];
+        // Get the WebGL context.
+        this.context = canvas.getContext('webgl');
+        // Initialize shaders and vertex buffers.
+        this.initShaders();
+        this.initVertexBuffers();
+        // Initialize view.
+        this.view = new _view.View(canvas.width, canvas.height);
+    }
+    /**
+   * Draws a circle.
+   * @param center The center of the circle.
+   * @param radius The radius of the circle.
+   * @param color The color of the circle.
+   */ drawCircle(center, radius, color) {
+        this.commands.push(new _drawCircle.DrawCircle(center, radius, color));
+    }
+    /**
+   * Zooms the view in.
+   * @param factor The zoom factor.
+   */ zoom(factor) {
+        this.view.zoom(factor);
+    }
+    /**
+   * Moves the view.
+   * @param delta The delta to move the view by.
+   */ move(delta) {
+        this.view.move(delta);
+    }
+    /**
+   * Flushes the renderer, showing the current state of the app.
+   */ flush() {
+        // Clear the screen with the background color.
+        this.context.clearColor(BACKGROUND_COLOR.r, BACKGROUND_COLOR.g, BACKGROUND_COLOR.b, 1);
+        this.context.clear(this.context.COLOR_BUFFER_BIT);
+        // Execute all draw commands.
+        this.context.bindBuffer(this.context.ARRAY_BUFFER, this.vertexBuffer);
+        this.context.vertexAttribPointer(this.positionAttribute, 2, this.context.FLOAT, false, 0, 0);
+        this.context.enableVertexAttribArray(this.positionAttribute);
+        this.context.useProgram(this.program);
+        for (let command of this.commands)if (command instanceof _drawCircle.DrawCircle) {
+            const translation = _math.Mat3.translation(command.center);
+            const scale = _math.Mat3.scale(new _math.Vec2(command.radius, command.radius));
+            const transform = scale.mul(translation).mul(this.view.getTransform());
+            this.context.uniformMatrix3fv(this.transformUniform, false, transform.elements);
+            this.context.uniform3f(this.colorUniform, command.color.r, command.color.g, command.color.b);
+            this.context.drawArrays(this.context.TRIANGLE_FAN, this.circle[0], this.circle[1]);
+        }
+        this.commands = [];
+    }
+    /**
+   * Initializes shaders used for drawing.
+   */ initShaders() {
+        // Create vertex shader.
+        this.vertexShader = this.context.createShader(this.context.VERTEX_SHADER);
+        this.context.shaderSource(this.vertexShader, `
+      attribute vec2 position;
+
+      uniform mat3 transform;
+
+      void main() {
+        vec2 transformed = (transform * vec3(position, 1.0)).xy;
+        gl_Position = vec4(transformed, 0.0, 1.0);
+      }
+    `);
+        this.context.compileShader(this.vertexShader);
+        // Create fragment shader.
+        this.fragmentShader = this.context.createShader(this.context.FRAGMENT_SHADER);
+        this.context.shaderSource(this.fragmentShader, `
+      uniform mediump vec3 color;
+
+      void main() {
+        gl_FragColor = vec4(color, 1.0);
+      }
+    `);
+        this.context.compileShader(this.fragmentShader);
+        // Create shader program.
+        this.program = this.context.createProgram();
+        this.context.attachShader(this.program, this.vertexShader);
+        this.context.attachShader(this.program, this.fragmentShader);
+        this.context.linkProgram(this.program);
+        // Get shader program attribute locations.
+        this.positionAttribute = this.context.getAttribLocation(this.program, 'position');
+        // Get shader program uniform locations.
+        this.transformUniform = this.context.getUniformLocation(this.program, 'transform');
+        this.colorUniform = this.context.getUniformLocation(this.program, 'color');
+    }
+    /**
+   * Initializes vertex buffers used for drawing.
+   */ initVertexBuffers() {
+        // Generate circle vertices
+        this.circle = [
+            0,
+            CIRCLE_DIVISIONS + 2
+        ];
+        let vertices = [];
+        vertices.push(0, 0);
+        for(let i = 0; i <= CIRCLE_DIVISIONS; i++){
+            let angle = i / CIRCLE_DIVISIONS * Math.PI * 2;
+            vertices.push(Math.cos(angle), Math.sin(angle));
+        }
+        // Generate vertex buffer
+        this.vertexBuffer = this.context.createBuffer();
+        this.context.bindBuffer(this.context.ARRAY_BUFFER, this.vertexBuffer);
+        this.context.bufferData(this.context.ARRAY_BUFFER, new Float32Array(vertices), this.context.STATIC_DRAW);
+    }
+}
+
+},{"../math":"9zUrS","./view":"l5tb4","./color":"ak01f","./draw_circle":"fpeFl","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"l5tb4":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * A view is a 2D camera that can be used to render a scene.
+ */ parcelHelpers.export(exports, "View", ()=>View
+);
+var _math = require("../math");
+class View {
+    // Default constructor
+    constructor(width, height){
+        this.position = new _math.Vec2(0, 0);
+        this.scale = 1;
+        this.aspectRatio = height / width;
+        this.updateTransform();
+    }
+    /**
+   * Gets the transform matrix.
+   * @returns The transform matrix.
+   */ getTransform() {
+        return this.transform;
+    }
+    /**
+   * Sets the view's position.
+   * @param position The new position.
+   */ setPosition(position) {
+        this.position = position;
+        this.updateTransform();
+    }
+    /**
+   * Sets the view's scale.
+   * @param scale The new scale.
+   */ setScale(scale) {
+        this.scale = scale;
+        this.updateTransform();
+    }
+    /**
+   * Moves the view by a given amount.
+   * @param delta The amount to move.
+   */ move(delta) {
+        this.setPosition(this.position.add(delta.div(this.scale)));
+    }
+    /**
+   * Zooms the view in.
+   * @param factor The zoom factor.
+   */ zoom(multiplier) {
+        this.setScale(this.scale / multiplier);
+    }
+    /**
+   * Updates the transform matrix.
+   */ updateTransform() {
+        const translation = _math.Mat3.translation(new _math.Vec2(this.position.x, this.position.y));
+        const scale = _math.Mat3.scale(new _math.Vec2(this.scale * this.aspectRatio, this.scale));
+        this.transform = translation.mul(scale);
+    }
+}
+
+},{"../math":"9zUrS","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"ak01f":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * Describes a color.
+ */ parcelHelpers.export(exports, "Color", ()=>Color
+);
+class Color {
+    /**
+   * @param r The red component of the color.
+   * @param g The green component of the color.
+   * @param b The blue component of the color.
+   * @param a The alpha component of the color.
+   */ constructor(r, g, b, a = 1){
+        this.r = r;
+        this.g = g;
+        this.b = b;
+        this.a = a;
+    }
+    /**
+   * Adds the given color to this color, returning a new color.
+   * @param other The color to add.
+   * @returns The new color.
+   */ add(other) {
+        const r = Math.min(1, this.r + other.r);
+        const g = Math.min(1, this.g + other.g);
+        const b = Math.min(1, this.b + other.b);
+        const a = Math.min(1, this.a + other.a);
+        return new Color(r, g, b, a);
+    }
+    /**
+   * Mixes this color with the given color, returning a new color.
+   * @param other The color to mix with.
+   * @returns The new color.
+   */ mix(other1) {
+        const r = (this.r + other1.r) / 2;
+        const g = (this.g + other1.g) / 2;
+        const b = (this.b + other1.b) / 2;
+        const a = (this.a + other1.a) / 2;
+        return new Color(r, g, b, a);
+    }
+    /**
+   * Multiplies this color by a scalar, returning a new color.
+   * @param multiplier The scalar to multiply by.
+   * @returns The new color.
+   */ mul(multiplier) {
+        const r = Math.min(1, this.r * multiplier);
+        const g = Math.min(1, this.g * multiplier);
+        const b = Math.min(1, this.b * multiplier);
+        return new Color(r, g, b, this.a);
+    }
+    /**
+   * Divides this color by a scalar, returning a new color.
+   * @param divider The scalar to divide by.
+   * @returns The new color.
+   */ div(divider) {
+        return this.mul(1 / divider);
+    }
+    /**
+   * Generates a random color.
+   * @returns A random color.
+   */ static random() {
+        return new Color(Math.random(), Math.random(), Math.random());
+    }
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"fpeFl":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * Represents a command used to draw a circle.
+ */ parcelHelpers.export(exports, "DrawCircle", ()=>DrawCircle
+);
+class DrawCircle {
+    /**
+   * @param center Position of the circle center. 
+   * @param radius Radius of the circle.
+   * @param color Color of the circle.
+   */ constructor(center, radius, color){
+        this.center = center;
+        this.radius = radius;
+        this.color = color;
+    }
+}
+
 },{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"8br0T":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
@@ -1072,7 +1097,6 @@ class World {
             this.bodies[j].applyForce(force, dt);
             this.bodies[i1].applyForce(force.mul(-1), dt);
         }
-        // Check for collisions between bodies.
         for(let i2 = 0; i2 < this.bodies.length; i2++){
             for(let j = i2 + 1; j < this.bodies.length; j++)// Check for collision.
             if (this.bodies[i2].collides(this.bodies[j])) {
@@ -1091,7 +1115,7 @@ class World {
     }
 }
 
-},{"./body":"4UTpg","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV","./renderer/color":"ak01f"}],"4UTpg":[function(require,module,exports) {
+},{"./body":"4UTpg","./renderer/color":"ak01f","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"4UTpg":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 /**
@@ -1153,7 +1177,13 @@ class Body {
    * @param force The force to apply to the body.
    * @param dt The time step.
    */ applyForce(force, dt) {
-        this.velocity = this.velocity.add(force.mul(dt / this.mass));
+        this.applyImpulse(force.mul(dt));
+    }
+    /**
+   * Applies an impulse to the body.
+   * @param impulse The impulse to apply to the body.
+   */ applyImpulse(impulse) {
+        this.velocity = this.velocity.add(impulse.mul(1 / this.mass));
     }
     /**
    * Updates the body's position.
@@ -1177,7 +1207,7 @@ class Body {
    * @returns The new body.
    */ merge(other1) {
         const mass = this.mass + other1.mass;
-        const position = this.mass > other1.mass ? this.position : other1.position;
+        const position = this.position.mul(this.mass).add(other1.position.mul(other1.mass)).div(mass);
         const velocity = this.velocity.mul(this.mass).add(other1.velocity.mul(other1.mass)).div(mass);
         const colorA = this.color.mul(this.mass / mass);
         const colorB = other1.color.mul(other1.mass / mass);
