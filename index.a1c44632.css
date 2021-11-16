@@ -11,17 +11,17 @@ input[type=range]::-webkit-slider-runnable-track {
   height: 4px;
   cursor: pointer;
   box-shadow: 0px 0px 0px transparent, 0px 0px 0px rgba(13, 13, 13, 0);
-  background: #fafafa;
+  background: white;
   border-radius: 5px;
-  border: 1px solid black;
+  border: 1px solid white;
 }
 input[type=range]::-webkit-slider-thumb {
   box-shadow: 0px 0px 0px transparent, 0px 0px 0px rgba(13, 13, 13, 0);
-  border: 1px solid black;
+  border: 2px solid white;
   height: 16px;
   width: 16px;
   border-radius: 4px;
-  background: #0099ff;
+  background: #026cb3;
   cursor: pointer;
   -webkit-appearance: none;
   margin-top: -7px;
@@ -34,17 +34,17 @@ input[type=range]::-moz-range-track {
   height: 4px;
   cursor: pointer;
   box-shadow: 0px 0px 0px transparent, 0px 0px 0px rgba(13, 13, 13, 0);
-  background: #fafafa;
+  background: white;
   border-radius: 5px;
-  border: 1px solid black;
+  border: 1px solid white;
 }
 input[type=range]::-moz-range-thumb {
   box-shadow: 0px 0px 0px transparent, 0px 0px 0px rgba(13, 13, 13, 0);
-  border: 1px solid black;
+  border: 2px solid white;
   height: 16px;
   width: 16px;
   border-radius: 4px;
-  background: #0099ff;
+  background: #026cb3;
   cursor: pointer;
 }
 input[type=range]::-ms-track {
@@ -57,28 +57,28 @@ input[type=range]::-ms-track {
   color: transparent;
 }
 input[type=range]::-ms-fill-lower {
-  background: #ededed;
-  border: 1px solid black;
+  background: #f2f2f2;
+  border: 1px solid white;
   border-radius: 10px;
   box-shadow: 0px 0px 0px transparent, 0px 0px 0px rgba(13, 13, 13, 0);
 }
 input[type=range]::-ms-fill-upper {
-  background: #fafafa;
-  border: 1px solid black;
+  background: white;
+  border: 1px solid white;
   border-radius: 10px;
   box-shadow: 0px 0px 0px transparent, 0px 0px 0px rgba(13, 13, 13, 0);
 }
 input[type=range]::-ms-thumb {
   box-shadow: 0px 0px 0px transparent, 0px 0px 0px rgba(13, 13, 13, 0);
-  border: 1px solid black;
+  border: 2px solid white;
   height: 16px;
   width: 16px;
   border-radius: 4px;
-  background: #0099ff;
+  background: #026cb3;
   cursor: pointer;
 }
 input[type=range]:focus::-ms-fill-lower {
-  background: #fafafa;
+  background: white;
 }
 input[type=range]:focus::-ms-fill-upper {
   background: #ffffff;
@@ -93,24 +93,28 @@ div.overlay {
   display: flex;
   align-content: stretch;
   gap: 10px;
+  pointer-events: none;
 }
 div.overlay > div.start {
   flex: 1;
   display: flex;
   gap: 0.3em;
+  pointer-events: none;
 }
 div.overlay > div.end {
   flex: 1;
   display: flex;
   gap: 0.3em;
   flex-direction: row-reverse;
+  pointer-events: none;
 }
 div.overlay button {
   height: 100%;
   padding: 0.2em 0.4em;
-  background: #0099ff;
+  background: #026cb3;
   border: 2px solid white;
   border-radius: 6px;
+  pointer-events: auto;
   cursor: pointer;
 }
 .overlay button:hover {
@@ -119,12 +123,16 @@ div.overlay button {
 .overlay button:active {
   background: #0099ff;
 }
+.overlay button.on {
+  background: #0099ff;
+}
 div.overlay div.range {
   max-height: 100%;
   padding: 0.2em 0.4em;
   background: #585858;
   border: 2px solid white;
   border-radius: 6px;
+  pointer-events: auto;
 }
 div.overlay div.range > input {
   display: inline-block;
@@ -134,7 +142,11 @@ div.overlay div.range > input {
 div.overlay div.range > div.value {
   display: inline-block;
   vertical-align: middle;
-  width: 4em;
+  text-align: right;
+  width: 7ch;
+  background-color: #3a3a3a;
+  border-radius: 4px;
+  padding: 0 0.2em;
 }
 * {
   font-size: 1em;

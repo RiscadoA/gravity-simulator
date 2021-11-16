@@ -460,73 +460,10 @@ function hmrAcceptRun(bundle, id) {
 
 },{}],"jZgE0":[function(require,module,exports) {
 var _app = require("./app/app");
-var _math = require("./app/math");
-// Initialize canvas
-const canvas = document.getElementById('canvas');
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-// Initialize app
-const app = new _app.App(canvas);
-// Add speed range event
-const speedRange = document.getElementById('speedInput');
-const speedValue = document.getElementById('speedValue');
-speedRange.addEventListener('input', ()=>{
-    const speed = Math.pow(10, parseFloat(speedRange.value));
-    speedValue.innerText = speed.toFixed(2);
-    app.setSpeed(speed);
-});
-speedRange.value = 0..toFixed(2);
-speedRange.dispatchEvent(new Event('input'));
-// Add mass range event
-const massRange = document.getElementById('massInput');
-const massValue = document.getElementById('massValue');
-massRange.addEventListener('input', ()=>{
-    const mass = Math.pow(10, parseFloat(massRange.value));
-    massValue.innerText = mass.toExponential(1);
-});
-massRange.value = 1..toExponential(1);
-massRange.dispatchEvent(new Event('input'));
-// Add drag event
-let dragging = false;
-let lastMousePos = new _math.Vec2(0, 0);
-canvas.addEventListener('mousedown', (event)=>{
-    if (event.button == 1) {
-        dragging = true;
-        lastMousePos = new _math.Vec2(event.offsetX, event.offsetY);
-    }
-    event.preventDefault();
-}, false);
-canvas.addEventListener('mousemove', (event)=>{
-    if (dragging) {
-        const mousePos = new _math.Vec2(event.offsetX, event.offsetY);
-        let delta = mousePos.sub(lastMousePos);
-        delta.y = -delta.y;
-        lastMousePos = mousePos;
-        app.move(delta.mul(0.001));
-    }
-    event.preventDefault();
-}, false);
-canvas.addEventListener('mouseup', (event)=>{
-    if (event.button == 1) dragging = false;
-    event.preventDefault();
-}, false);
-// Add zoom event
-canvas.addEventListener('wheel', (event)=>{
-    if (event.deltaY > 0) app.zoom(1.1);
-    else app.zoom(0.9);
-    event.preventDefault();
-}, false);
-// Main application loop
-let lastTime = 0;
-function step(currentTime) {
-    const dt = currentTime - lastTime;
-    lastTime = currentTime;
-    app.animate(dt / 1000);
-    window.requestAnimationFrame(step);
-}
-window.requestAnimationFrame(step);
+const app = new _app.App();
+app.start();
 
-},{"./app/app":"dOyN2","./app/math":"9zUrS"}],"dOyN2":[function(require,module,exports) {
+},{"./app/app":"dOyN2"}],"dOyN2":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 /**
@@ -535,59 +472,119 @@ parcelHelpers.defineInteropFlag(exports);
 );
 var _math = require("./math");
 var _renderer = require("./renderer");
+var _tools = require("./tools");
+var _ui = require("./ui");
 var _world = require("./world");
-/** Multiplier of the time step passed to the update functions. */ const TIME_SCALE = 10;
+/** Multiplier of the time step passed to the update functions. */ const TIME_SCALE = 0.00001;
 class App {
-    /**
-   * @param canvas HTML element to attach the application to.
-   */ constructor(canvas){
+    // Default constructor.
+    constructor(){
+        // Initialize canvas
+        const canvas = document.getElementById('canvas');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
         // Create renderer.
         this.renderer = new _renderer.Renderer(canvas);
+        this.renderer.view.setOnZoomChange(this.onMouseMove.bind(this));
         // Create physics world.
         this.world = new _world.World();
-        this.speed = 1;
-        // Create a few bodies.
-        const CENTRAL_MASS = 1000;
-        // this.world.addBody(1000000.0, new Vec2(-100.0, 0.0), new Vec2(0.1, 0.2));
-        this.world.addBody(CENTRAL_MASS, new _math.Vec2(0, 0), new _math.Vec2(0, 0));
-        for(let i = 0; i < 100; ++i){
-            const mass = 0.1;
-            const angle = i / 100 * Math.PI * 2;
-            const distance = 1;
-            const pos = new _math.Vec2(Math.cos(angle) * distance, Math.sin(angle) * distance);
-            const vel = pos.perpendicular().normalize().mul(Math.sqrt(_world.GRAVITY_CONSTANT * CENTRAL_MASS / distance));
-            this.world.addBody(mass, pos, vel);
-        }
+        // Add canvas UI events
+        canvas.addEventListener('mousedown', (e)=>{
+            if (e.button !== 0) return;
+            this.mousePos = new _math.Vec2(e.offsetX, e.offsetY);
+            this.onMouseDown();
+            e.preventDefault();
+        });
+        canvas.addEventListener('mouseup', (e)=>{
+            if (e.button !== 0) return;
+            this.mousePos = new _math.Vec2(e.offsetX, e.offsetY);
+            this.onMouseUp();
+            e.preventDefault();
+        });
+        canvas.addEventListener('mousemove', (e)=>{
+            this.mousePos = new _math.Vec2(e.offsetX, e.offsetY);
+            this.onMouseMove();
+            e.preventDefault();
+        });
+        canvas.addEventListener('wheel', (event)=>{
+            this.renderer.view.zoom(event.deltaY > 0 ? 1.1 : 0.9);
+            event.preventDefault();
+        });
+        // Initialize UI sliders
+        this.speed = new _ui.Slider(document.getElementById('speedInput'), document.getElementById('speedValue'), 'exponential');
+        this.speed.value = 1;
+        this.mass = new _ui.Slider(document.getElementById('massInput'), document.getElementById('massValue'), 'exponential');
+        this.mass.value = 1;
+        // Initialize UI buttons
+        this.resetButton = new _ui.Button(document.getElementById('resetButton'));
+        this.settingsButton = new _ui.Button(document.getElementById('settingsButton'));
+        // Initialize UI toggles
+        this.addBodyToggle = new _ui.Toggle(document.getElementById('addBodyToggle'));
+        this.removeBodyToggle = new _ui.Toggle(document.getElementById('removeBodyToggle'));
+        this.moveCameraToggle = new _ui.Toggle(document.getElementById('moveCameraToggle'));
+        // Initialize tools
+        this.tools = new Map();
+        this.tools.set('addBody', new _tools.BodyAdder(this.world, this.renderer.view, this.mass));
+        this.tools.set('removeBody', new _tools.BodyRemover(this.world, this.renderer.view));
+        this.tools.set('moveCamera', new _tools.CameraMover(this.renderer.view));
+        this.tool = undefined;
+        // Intiailize UI tool switch
+        this.toolSwitch = new _ui.Switch();
+        this.toolSwitch.add('addBody', this.addBodyToggle);
+        this.toolSwitch.add('removeBody', this.removeBodyToggle);
+        this.toolSwitch.add('moveCamera', this.moveCameraToggle);
+        this.toolSwitch.setOnStateChange((tool)=>{
+            this.tool = this.tools.get(tool);
+            if (this.tool) this.tool.activate();
+        });
+    // Create a few bodies.
+    /*const CENTRAL_MASS = 1000.0;
+    this.world.addBody(new Body(CENTRAL_MASS, new Vec2(0.0, 0.0), new Vec2(0.0, 0.0), Color.random()));
+
+    for (let i = 0; i < 100; ++i) {
+      const mass = 0.1;
+      const angle = (i / 100.0) * Math.PI * 2;
+      const distance = 1.0;
+      const pos = new Vec2(Math.cos(angle) * distance, Math.sin(angle) * distance);
+      const vel = pos.perpendicular().normalize().mul(Math.sqrt(GRAVITY_CONSTANT * (CENTRAL_MASS) / distance));
+      this.world.addBody(new Body(mass, pos, vel, Color.random()));
+    }*/ }
+    /**
+   * Starts the application's main loop.
+   */ start() {
+        this.animate(0);
     }
     /**
    * Updates and draws the application.
-   * @param dt Time step in seconds.
+   * @param dt Time step in milliseconds.
    */ animate(dt) {
-        this.world.update(this.speed * dt * TIME_SCALE);
+        this.world.update(this.speed.value * dt * TIME_SCALE);
+        if (this.tool) this.tool.draw(this.renderer);
         this.world.draw(this.renderer);
         this.renderer.flush();
+        window.requestAnimationFrame(this.animate.bind(this));
     }
     /**
-   * Zooms the view in.
-   * @param factor The zoom factor.
-   */ zoom(factor) {
-        this.renderer.zoom(factor);
+   * Mouse down event listener.
+   * @param event The mouse event.
+   */ onMouseDown() {
+        if (this.tool) this.tool.onMouseDown(this.mousePos);
     }
     /**
-   * Moves the view.
-   * @param delta The delta to move the view by.
-   */ move(delta) {
-        this.renderer.move(delta);
+   * Mouse up event listener.
+   * @param event The mouse event.
+   */ onMouseUp() {
+        if (this.tool) this.tool.onMouseUp(this.mousePos);
     }
     /**
-   * Sets the simulation speed.
-   * @param speed The new simulation speed.
-   */ setSpeed(speed) {
-        this.speed = speed;
+   * Mouse move event listener.
+   * @param event The mouse event.
+   */ onMouseMove() {
+        if (this.tool) this.tool.onMouseMove(this.mousePos);
     }
 }
 
-},{"./math":"9zUrS","./renderer":"bK5TX","./world":"8br0T","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"9zUrS":[function(require,module,exports) {
+},{"./math":"9zUrS","./renderer":"bK5TX","./world":"8br0T","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV","./ui":"eFpQJ","./tools":"acJ2D"}],"9zUrS":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 /**
@@ -661,7 +658,7 @@ class Vec2 {
     }
     /**
    * Returns a vector perpendicular to this matrix.
-   * @returns The result. 
+   * @returns The result.
    */ perpendicular() {
         return new Vec2(-this.y, this.x);
     }
@@ -695,11 +692,11 @@ class Mat3 {
         } else if (other instanceof Vec2) {
             const result = new Vec2(0, 0);
             result.x += this.elements[0] * other.x;
-            result.x += this.elements[1] * other.y;
-            result.x += this.elements[2];
-            result.y += this.elements[0] * other.x;
-            result.y += this.elements[1] * other.y;
-            result.y += this.elements[2];
+            result.x += this.elements[3] * other.y;
+            result.x += this.elements[6];
+            result.y += this.elements[1] * other.x;
+            result.y += this.elements[4] * other.y;
+            result.y += this.elements[7];
             return result;
         } else {
             const result = new Mat3();
@@ -714,6 +711,37 @@ class Mat3 {
         const result = new Mat3();
         for(let i = 0; i < 3; i++)for(let j = 0; j < 3; j++)result.elements[i * 3 + j] = this.elements[j * 3 + i];
         return result;
+    }
+    /**
+   * Calculates the determinant of this matrix and returns the result.
+   * @returns The result.
+   */ determinant() {
+        return this.elements[0] * (this.elements[4] * this.elements[8] - this.elements[5] * this.elements[7]) - this.elements[1] * (this.elements[3] * this.elements[8] - this.elements[5] * this.elements[6]) + this.elements[2] * (this.elements[3] * this.elements[7] - this.elements[4] * this.elements[6]);
+    }
+    /**
+   * Calcultes the adjunt matrix of this matrix and returns the result.
+   * @returns The result.
+   */ adjunt() {
+        const result = new Mat3();
+        const els = this.elements;
+        result.elements[0] = els[4] * els[8] - els[5] * els[7];
+        result.elements[1] = els[2] * els[7] - els[1] * els[8];
+        result.elements[2] = els[1] * els[5] - els[2] * els[4];
+        result.elements[3] = els[5] * els[6] - els[3] * els[8];
+        result.elements[4] = els[0] * els[8] - els[2] * els[6];
+        result.elements[5] = els[2] * els[3] - els[0] * els[5];
+        result.elements[6] = els[3] * els[7] - els[4] * els[6];
+        result.elements[7] = els[1] * els[6] - els[0] * els[7];
+        result.elements[8] = els[0] * els[4] - els[1] * els[3];
+        return result;
+    }
+    /**
+   * Calculates the inverse of this matrix and returns the result.
+   * @returns The result.
+   */ inverse() {
+        const det = this.determinant();
+        if (det === 0) throw new Error('Cannot invert matrix with determinant 0.');
+        return this.adjunt().mul(1 / det);
     }
     /**
    * Returns the identity matrix.
@@ -789,14 +817,16 @@ exports.export = function(dest, destName, get) {
 },{}],"bK5TX":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "View", ()=>_view.View
+);
 /**
  * Class used to render the app.
  */ parcelHelpers.export(exports, "Renderer", ()=>Renderer
 );
 var _math = require("../math");
-var _view = require("./view");
 var _color = require("./color");
 var _drawCircle = require("./draw_circle");
+var _view = require("./view");
 /** Background color of the application. */ const BACKGROUND_COLOR = new _color.Color(0.05, 0.05, 0.05);
 /** Number of divisions used for drawing circles. */ const CIRCLE_DIVISIONS = 32;
 class Renderer {
@@ -805,12 +835,13 @@ class Renderer {
    */ constructor(canvas){
         this.commands = [];
         // Get the WebGL context.
-        this.context = canvas.getContext('webgl');
+        this.canvas = canvas;
+        this.context = this.canvas.getContext('webgl');
         // Initialize shaders and vertex buffers.
         this.initShaders();
         this.initVertexBuffers();
         // Initialize view.
-        this.view = new _view.View(canvas.width, canvas.height);
+        this.view = new _view.View(this.canvas.width, this.canvas.height);
     }
     /**
    * Draws a circle.
@@ -819,18 +850,6 @@ class Renderer {
    * @param color The color of the circle.
    */ drawCircle(center, radius, color) {
         this.commands.push(new _drawCircle.DrawCircle(center, radius, color));
-    }
-    /**
-   * Zooms the view in.
-   * @param factor The zoom factor.
-   */ zoom(factor) {
-        this.view.zoom(factor);
-    }
-    /**
-   * Moves the view.
-   * @param delta The delta to move the view by.
-   */ move(delta) {
-        this.view.move(delta);
     }
     /**
    * Flushes the renderer, showing the current state of the app.
@@ -923,9 +942,13 @@ class View {
     // Default constructor
     constructor(width, height){
         this.position = new _math.Vec2(0, 0);
-        this.scale = 1;
+        this._scale = 1;
         this.aspectRatio = height / width;
+        this.width = width;
+        this.height = height;
         this.updateTransform();
+        this.onZoomChangeCallback = ()=>{
+        };
     }
     /**
    * Gets the transform matrix.
@@ -942,10 +965,15 @@ class View {
     }
     /**
    * Sets the view's scale.
-   * @param scale The new scale.
-   */ setScale(scale) {
-        this.scale = scale;
+   */ set scale(scale) {
+        this._scale = scale;
         this.updateTransform();
+        this.onZoomChangeCallback();
+    }
+    /**
+   * Gets the view's scale.
+   */ get scale() {
+        return this._scale;
     }
     /**
    * Moves the view by a given amount.
@@ -957,7 +985,23 @@ class View {
    * Zooms the view in.
    * @param factor The zoom factor.
    */ zoom(multiplier) {
-        this.setScale(this.scale / multiplier);
+        this.scale /= multiplier;
+    }
+    /**
+   * Converts from screen coordinates to world coordinates.
+   * @param screen The screen coordinates.
+   * @return The world coordinates.
+   */ screenToWorld(screen) {
+        let normalized = new _math.Vec2(screen.x / this.width, screen.y / this.height);
+        normalized = normalized.sub(new _math.Vec2(0.5, 0.5)).mul(2);
+        normalized.y *= -1;
+        return this.transform.inverse().mul(normalized);
+    }
+    /**
+   * Sets the zoom change callback.
+   * @param callback The callback.
+   */ setOnZoomChange(callback) {
+        this.onZoomChangeCallback = callback;
     }
     /**
    * Updates the transform matrix.
@@ -1062,8 +1106,6 @@ parcelHelpers.export(exports, "GRAVITY_CONSTANT", ()=>GRAVITY_CONSTANT
  * Represents a world of bodies.
  */ parcelHelpers.export(exports, "World", ()=>World
 );
-var _body = require("./body");
-var _color = require("./renderer/color");
 const GRAVITY_CONSTANT = 0.000001;
 class World {
     // Default constructor.
@@ -1072,11 +1114,20 @@ class World {
     }
     /**
    * Adds a body to the world.
-   * @param mass The mass of the body.
-   * @param position The initial position of the body.
-   * @param velocity The initial velocity of the body.
-   */ addBody(mass, position, velocity) {
-        this.bodies.push(new _body.Body(mass, position, velocity, _color.Color.random().add(new _color.Color(0.1, 0.1, 0.1))));
+   * @param body Body to add.
+   */ addBody(body) {
+        this.bodies.push(body);
+    }
+    /**
+   * Removes a body from the world.
+   * @param position The position of the body to remove.
+   */ removeBody(position) {
+        for(let i = 0; i < this.bodies.length; i++)if (this.bodies[i].intersects(position)) this.bodies.splice(i, 1);
+    }
+    /**
+   * Deletes all bodies in the world.
+   */ clear() {
+        this.bodies = [];
     }
     /**
    * Updates the world.
@@ -1089,17 +1140,17 @@ class World {
             const body1 = this.bodies[i1];
             const body2 = this.bodies[j];
             // Calculate the force of gravity between the two bodies.
-            const offset = body1.getPosition().sub(body2.getPosition());
+            const offset = body1.position.sub(body2.position);
             const sqrDistance = offset.sqrLength();
             const direction = offset.normalize();
-            const force = direction.mul(GRAVITY_CONSTANT * body1.getMass() * body2.getMass() / sqrDistance);
+            const force = direction.mul(GRAVITY_CONSTANT * body1.mass * body2.mass / sqrDistance);
             // Apply the force to the bodies.
             this.bodies[j].applyForce(force, dt);
             this.bodies[i1].applyForce(force.mul(-1), dt);
         }
         for(let i2 = 0; i2 < this.bodies.length; i2++){
             for(let j = i2 + 1; j < this.bodies.length; j++)// Check for collision.
-            if (this.bodies[i2].collides(this.bodies[j])) {
+            if (this.bodies[i2].intersects(this.bodies[j])) {
                 // Create a new body from the two bodies.
                 this.bodies[i2] = this.bodies[i2].merge(this.bodies[j]);
                 // Remove the second body.
@@ -1111,66 +1162,349 @@ class World {
    * Draws the world.
    * @param renderer Renderer used.
    */ draw(renderer) {
-        for(let i = 0; i < this.bodies.length; i++)renderer.drawCircle(this.bodies[i].getPosition(), this.bodies[i].getRadius(), this.bodies[i].getColor());
+        for(let i = 0; i < this.bodies.length; i++)renderer.drawCircle(this.bodies[i].position, this.bodies[i].radius, this.bodies[i].color);
     }
 }
 
-},{"./body":"4UTpg","./renderer/color":"ak01f","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"4UTpg":[function(require,module,exports) {
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"eFpQJ":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "Slider", ()=>_slider.Slider
+);
+parcelHelpers.export(exports, "SliderType", ()=>_slider.SliderType
+);
+parcelHelpers.export(exports, "Button", ()=>_button.Button
+);
+parcelHelpers.export(exports, "Switch", ()=>_switch.Switch
+);
+parcelHelpers.export(exports, "Toggle", ()=>_toggle.Toggle
+);
+var _slider = require("./slider");
+var _button = require("./button");
+var _switch = require("./switch");
+var _toggle = require("./toggle");
+
+},{"./slider":"3OpYJ","./button":"b0yVv","./switch":"bkyAD","./toggle":"aOqPX","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"3OpYJ":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * Class used to read slider values from the user.
+ */ parcelHelpers.export(exports, "Slider", ()=>Slider
+);
+class Slider {
+    /**
+   * @param input Range input element.
+   * @param display Value display element.
+   * @param type The slider type.
+   */ constructor(input, display, type){
+        this.input = input;
+        this.display = display;
+        this.type = type;
+        this.input.addEventListener('input', this.updateDisplay.bind(this));
+    }
+    /**
+   * @returns The current value of the slider.
+   */ get value() {
+        switch(this.type){
+            case 'linear':
+                return this.input.valueAsNumber;
+            case 'exponential':
+                return Math.pow(10, this.input.valueAsNumber);
+        }
+    }
+    /**
+   * Sets the value of the slider.
+   */ set value(value) {
+        switch(this.type){
+            case 'linear':
+                this.input.valueAsNumber = value;
+                break;
+            case 'exponential':
+                this.input.valueAsNumber = Math.log10(value);
+                break;
+        }
+        this.updateDisplay();
+    }
+    /**
+   * Updates the display of the slider.
+   */ updateDisplay() {
+        if (this.value < 0.01 || this.value > 9999.99) this.display.innerText = this.value.toExponential(1);
+        else this.display.innerText = this.value.toFixed(2);
+    }
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"b0yVv":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * Class used to handle button events.
+ */ parcelHelpers.export(exports, "Button", ()=>Button
+);
+class Button {
+    /**
+   * @param element The button element.
+   */ constructor(element){
+        this.element = element;
+        this.onClickCallback = ()=>{
+        };
+        this.element.addEventListener('click', (_)=>this.onClickCallback()
+        );
+    }
+    /**
+   * Sets the button click callback.
+   */ setOnClick(callback) {
+        this.onClickCallback = callback;
+    }
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"bkyAD":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * A switch made of many toggles, where only one can be active at a time.
+ */ parcelHelpers.export(exports, "Switch", ()=>Switch
+);
+class Switch {
+    // Default constructor.
+    constructor(){
+        this.state = '';
+        this.toggles = [];
+        this.stateChangeCallback = (_)=>{
+        };
+    }
+    /**
+   * The current state of the switch.
+   */ get current() {
+        return this.state;
+    }
+    /**
+   * Sets the current state of the switch.
+   */ set current(name) {
+        if (this.state === name) return;
+        this.toggles.forEach((toggle)=>toggle[1].activated = toggle[0] === name
+        );
+        this.state = name;
+        this.stateChangeCallback(name);
+    }
+    /**
+   * Adds a toggle to the switch.
+   * @param name The name of the toggle.
+   * @param toggle The toggle to add.
+   */ add(name1, toggle) {
+        this.toggles.push([
+            name1,
+            toggle
+        ]);
+        toggle.setOnActivated(()=>this.onToggleActivated(name1)
+        );
+        toggle.setOnDeactivated(()=>this.onToggleDeactivated(name1)
+        );
+    }
+    /**
+   * Sets the callback called when the state changes.
+   * @param callback The callback to set.
+   */ setOnStateChange(callback) {
+        this.stateChangeCallback = callback;
+    }
+    /**
+   * Callback for when a toggle is activated.
+   * @param name The name of the toggle that was activated.
+   */ onToggleActivated(name2) {
+        this.current = name2;
+    }
+    /**
+   * Callback for when a toggle is deactivated.
+   * @param name The name of the toggle that was deactivated.
+   */ onToggleDeactivated(name3) {
+        if (this.state === name3) this.current = '';
+    }
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"aOqPX":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * A button that toggles between two states.
+ */ parcelHelpers.export(exports, "Toggle", ()=>Toggle
+);
+var _button = require("./button");
+class Toggle extends _button.Button {
+    /**
+   * @param element The button element.
+   */ constructor(element){
+        super(element);
+        this.state = false;
+        this.onActivatedCallback = ()=>{
+        };
+        this.onDeactivatedCallback = ()=>{
+        };
+        this.setOnClick(this.onClick.bind(this));
+    }
+    /**
+   * Is the toggle activated?
+   */ get activated() {
+        return this.state;
+    }
+    /**
+   * Set the toggle to activated or deactivated.
+   */ set activated(state) {
+        this.state = state;
+        this.element.classList.toggle('on', state);
+    }
+    /**
+   * Set the toggle activation callback.
+   * @param callback The callback to set.
+   */ setOnActivated(callback) {
+        this.onActivatedCallback = callback;
+    }
+    /**
+   * Set the toggle activation callback.
+   * @param callback The callback to set.
+   */ setOnDeactivated(callback1) {
+        this.onDeactivatedCallback = callback1;
+    }
+    /**
+   * Set the toggle activation callback.
+   */ onClick() {
+        this.activated = !this.activated;
+        if (this.activated) this.onActivatedCallback();
+        else this.onDeactivatedCallback();
+    }
+}
+
+},{"./button":"b0yVv","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"acJ2D":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "Tool", ()=>_tool.Tool
+);
+parcelHelpers.export(exports, "BodyAdder", ()=>_bodyAdder.BodyAdder
+);
+parcelHelpers.export(exports, "BodyRemover", ()=>_bodyRemover.BodyRemover
+);
+parcelHelpers.export(exports, "CameraMover", ()=>_cameraMover.CameraMover
+);
+var _tool = require("./tool");
+var _bodyAdder = require("./body_adder");
+var _bodyRemover = require("./body_remover");
+var _cameraMover = require("./camera_mover");
+
+},{"./tool":"5kQCS","./body_adder":"3vvBg","./body_remover":"9vhWm","./camera_mover":"c6DGr","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"5kQCS":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * Generic tool class.
+ */ parcelHelpers.export(exports, "Tool", ()=>Tool
+);
+class Tool {
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"3vvBg":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * Tool for adding bodies to the world.
+ */ parcelHelpers.export(exports, "BodyAdder", ()=>BodyAdder
+);
+var _body = require("../body");
+var _tool = require("./tool");
+/** Velocity multiplier for throwing bodies. */ const VELOCITY_MULTIPLIER = 0.001;
+class BodyAdder extends _tool.Tool {
+    /**
+   * @param world The world to add bodies to.
+   * @param view The view being used to render.
+   * @param mass The slider which indicates the body's mass.
+   */ constructor(world, view, mass){
+        super();
+        this.world = world;
+        this.view = view;
+        this.mass = mass;
+    }
+    activate() {
+        this.body = new _body.Body();
+        this.mouseDown = null;
+        this.mouseMoved = false;
+    }
+    draw(renderer) {
+        if (!this.mouseMoved) return;
+        this.body.mass = this.mass.value;
+        renderer.drawCircle(this.body.position, this.body.radius, this.body.color);
+    }
+    onMouseDown(position) {
+        this.body.position = this.view.screenToWorld(position);
+        this.mouseDown = position;
+    }
+    onMouseUp(position1) {
+        if (this.mouseDown) {
+            let delta = position1.sub(this.mouseDown);
+            delta.y *= -1;
+            this.body.velocity = delta.mul(VELOCITY_MULTIPLIER * this.view.scale);
+            this.world.addBody(this.body);
+        }
+        this.activate();
+    }
+    onMouseMove(position2) {
+        if (!this.mouseDown) this.body.position = this.view.screenToWorld(position2);
+        this.mouseMoved = true;
+    }
+}
+
+},{"../body":"4UTpg","./tool":"5kQCS","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"4UTpg":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 /**
  * Represents a body in the simulation.
  */ parcelHelpers.export(exports, "Body", ()=>Body
 );
-/** The density of bodies. */ const BODY_DENSITY = 100;
+var _math = require("./math");
+var _color = require("./renderer/color");
+/** The density of bodies. */ const BODY_DENSITY = 200;
 class Body {
     /**
    * @param mass The body's initial mass.
    * @param position The body's initial position.
    * @param velocity The body's initial velocity.
    * @param color The body's color.
-   */ constructor(mass, position, velocity, color){
-        this.setMass(mass);
-        this.position = position;
-        this.velocity = velocity;
-        this.color = color;
-    }
-    /**
-   * Gets the body's mass.
-   * @returns The body's mass.
-   */ getMass() {
-        return this.mass;
-    }
-    /**
-   * Gets the body's radius.
-   * @returns The body's radius.
-   */ getRadius() {
-        return this.radius;
+   */ constructor(){
+        this.mass = 1;
+        this.position = new _math.Vec2(0, 0);
+        this.velocity = new _math.Vec2(0, 0);
+        this.color = _color.Color.random();
     }
     /**
    * Gets the body's position.
-   * @returns The 2D vector which represents the body's position.
-   */ getPosition() {
-        return this.position;
+   */ get position() {
+        return this._position;
+    }
+    /**
+   * Sets the body's position.
+   */ set position(position) {
+        this._position = new _math.Vec2(position.x, position.y);
     }
     /**
    * Gets the body's velocity.
-   * @returns The body's velocity.
-   */ getVelocity() {
-        return this.velocity;
+   */ get velocity() {
+        return this._velocity;
     }
     /**
-   * Gets the body's color.
-   * @return The body's color.
-   */ getColor() {
-        return this.color;
+   * Sets the body's velocity.
+   */ set velocity(velocity) {
+        this._velocity = new _math.Vec2(velocity.x, velocity.y);
+    }
+    /**
+   * Gets the body's mass.
+   */ get mass() {
+        return this._mass;
     }
     /**
    * Sets the body's mass.
-   * @param mass The body's new mass.
-   */ setMass(mass1) {
-        this.mass = mass1;
-        this.radius = 0.75 * Math.PI * this.mass ** (1 / 3) / BODY_DENSITY;
+   */ set mass(mass) {
+        this._mass = mass;
+        this._radius = 0.75 * Math.PI * this.mass ** (1 / 3) / BODY_DENSITY;
+    }
+    /**
+   * Gets the body's radius.
+   */ get radius() {
+        return this._radius;
     }
     /**
    * Applies a force to the body.
@@ -1191,31 +1525,102 @@ class Body {
    */ update(dt1) {
         this.position = this.position.add(this.velocity.mul(dt1));
     }
-    /**
-   * Checks if this body is colliding with another.
-   * @param other The other body.
-   * @returns Whether the bodies are colliding.
-   */ collides(other) {
-        // The square of the distance is used to avoid calculating the square root.
-        const sqrDistance = this.position.sub(other.position).sqrLength();
-        const sqrRadius = (this.radius + other.radius) ** 2;
-        return sqrDistance <= sqrRadius;
+    // Implementation
+    intersects(other) {
+        if (other instanceof Body) {
+            // The square of the distance is used to avoid calculating the square root.
+            const sqrDistance = this.position.sub(other.position).sqrLength();
+            const sqrRadius = (this.radius + other.radius) ** 2;
+            return sqrDistance <= sqrRadius;
+        } else return this.position.sub(other).sqrLength() <= this.radius ** 2;
     }
     /**
    * Merges this body with another.
    * @param other The other body.
    * @returns The new body.
    */ merge(other1) {
-        const mass = this.mass + other1.mass;
-        const position = this.position.mul(this.mass).add(other1.position.mul(other1.mass)).div(mass);
-        const velocity = this.velocity.mul(this.mass).add(other1.velocity.mul(other1.mass)).div(mass);
-        const colorA = this.color.mul(this.mass / mass);
-        const colorB = other1.color.mul(other1.mass / mass);
-        const color = colorA.add(colorB);
-        return new Body(mass, position, velocity, color);
+        let b = new Body();
+        b.mass = this.mass + other1.mass;
+        b.position = this.position.mul(this.mass).add(other1.position.mul(other1.mass)).div(b.mass);
+        b.velocity = this.velocity.mul(this.mass).add(other1.velocity.mul(other1.mass)).div(b.mass);
+        const colorA = this.color.mul(this.mass / b.mass);
+        const colorB = other1.color.mul(other1.mass / b.mass);
+        b.color = colorA.add(colorB);
+        return b;
     }
 }
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}]},["11zn2","jZgE0"], "jZgE0", "parcelRequire34d4")
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV","./renderer/color":"ak01f","./math":"9zUrS"}],"9vhWm":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * Tool for removing bodies to the world.
+ */ parcelHelpers.export(exports, "BodyRemover", ()=>BodyRemover
+);
+var _tool = require("./tool");
+class BodyRemover extends _tool.Tool {
+    /**
+   * @param world The world to remove bodies from.
+   * @param view The view being used to render.
+   */ constructor(world, view){
+        super();
+        this.world = world;
+        this.view = view;
+    }
+    activate() {
+    // Do nothing.
+    }
+    draw() {
+    // Do nothing.
+    }
+    onMouseDown(_) {
+    // Do nothing.
+    }
+    onMouseUp(position) {
+        this.world.removeBody(this.view.screenToWorld(position));
+    }
+    onMouseMove(_1) {
+    // Do nothing.
+    }
+}
+
+},{"./tool":"5kQCS","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"c6DGr":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * Tool for moving the camera.
+ */ parcelHelpers.export(exports, "CameraMover", ()=>CameraMover
+);
+var _tool = require("./tool");
+/** Camera movement sensibility. */ const SENSIBILITY = 0.001;
+class CameraMover extends _tool.Tool {
+    /**
+   * @param view The view being used to render.
+   */ constructor(view){
+        super();
+        this.view = view;
+    }
+    activate() {
+        this.lastPosition = null;
+    }
+    draw() {
+    // Do nothing.
+    }
+    onMouseDown(position) {
+        this.lastPosition = position;
+    }
+    onMouseUp(_) {
+        this.lastPosition = null;
+    }
+    onMouseMove(position1) {
+        if (!this.lastPosition) return;
+        let delta = position1.sub(this.lastPosition);
+        delta.y *= -1;
+        this.lastPosition = position1;
+        this.view.move(delta.mul(SENSIBILITY));
+    }
+}
+
+},{"./tool":"5kQCS","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}]},["11zn2","jZgE0"], "jZgE0", "parcelRequire34d4")
 
 //# sourceMappingURL=index.e7f05703.js.map
