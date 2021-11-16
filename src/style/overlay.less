@@ -1,41 +1,46 @@
-@button       : #0099ff;
-@button-hover : #2aaaff;
-@button-active: #0099ff;
-@input-range  : #585858;
-@input-number : #585858;
+@button            : #026cb3;
+@button-hover      : #2aaaff;
+@button-active     : #0099ff;
+@input-range       : #585858;
+@input-range-value : #3a3a3a;
 
 div.overlay {
-  position     : absolute;
-  width        : 100%;
-  padding      : 0.5em;
-  box-sizing   : border-box;
-  z-index      : 1;
-  background   : transparent;
-  display      : flex;
-  align-content: stretch;
-  gap          : 10px;
+  position      : absolute;
+  width         : 100%;
+  padding       : 0.5em;
+  box-sizing    : border-box;
+  z-index       : 1;
+  background    : transparent;
+  display       : flex;
+  align-content : stretch;
+  gap           : 10px;
+  pointer-events: none;
 }
 
 div.overlay>div.start {
-  flex   : 1;
-  display: flex;
-  gap    : 0.3em;
+  flex          : 1;
+  display       : flex;
+  gap           : 0.3em;
+  pointer-events: none;
 }
 
 div.overlay>div.end {
-  flex   : 1;
-  display: flex;
-  gap    : 0.3em;
+  flex          : 1;
+  display       : flex;
+  gap           : 0.3em;
   flex-direction: row-reverse;
+  pointer-events: none;
 }
 
 div.overlay button {
-  height       : 100%;
-  padding      : 0.2em 0.4em;
-  background   : @button;
-  border       : 2px solid white;
-  border-radius: 6px;
-  cursor       : pointer;
+  height        : 100%;
+  padding       : 0.2em 0.4em;
+  background    : @button;
+  border        : 2px solid white;
+  border-radius : 6px;
+  pointer-events: auto;
+  cursor        : pointer;
+
 }
 
 .overlay button:hover {
@@ -46,12 +51,17 @@ div.overlay button {
   background: @button-active;
 }
 
+.overlay button.on {
+  background: @button-active;
+}
+
 div.overlay div.range {
-  max-height   : 100%;
-  padding      : 0.2em 0.4em;
-  background   : @input-range;
-  border       : 2px solid white;
-  border-radius: 6px;
+  max-height    : 100%;
+  padding       : 0.2em 0.4em;
+  background    : @input-range;
+  border        : 2px solid white;
+  border-radius : 6px;
+  pointer-events: auto;
 }
 
 div.overlay div.range>input {
@@ -61,7 +71,11 @@ div.overlay div.range>input {
 }
 
 div.overlay div.range>div.value {
-  display       : inline-block;
-  vertical-align: middle;
-  width         : 4em;
+  display         : inline-block;
+  vertical-align  : middle;
+  text-align      : right;
+  width           : 7ch;
+  background-color: @input-range-value;
+  border-radius   : 4px;
+  padding         : 0 0.2em;
 }
