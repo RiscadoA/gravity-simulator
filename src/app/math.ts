@@ -87,7 +87,7 @@ export class Vec2 {
 
   /**
    * Returns a vector perpendicular to this matrix.
-   * @returns The result. 
+   * @returns The result.
    */
   public perpendicular(): Vec2 {
     return new Vec2(-this.y, this.x);
@@ -138,9 +138,7 @@ export class Mat3 {
       for (let i = 0; i < 3; i++) {
         for (let j = 0; j < 3; j++) {
           let sum = 0.0;
-          for (let k = 0; k < 3; k++) {
-            sum += this.elements[i * 3 + k] * other.elements[k * 3 + j];
-          }
+          for (let k = 0; k < 3; k++) sum += this.elements[i * 3 + k] * other.elements[k * 3 + j];
           result.elements[i * 3 + j] = sum;
         }
       }
@@ -148,17 +146,15 @@ export class Mat3 {
     } else if (other instanceof Vec2) {  // Multiply by vector
       const result = new Vec2(0.0, 0.0);
       result.x += this.elements[0 * 3 + 0] * other.x;
-      result.x += this.elements[0 * 3 + 1] * other.y;
-      result.x += this.elements[0 * 3 + 2];
-      result.y += this.elements[0 * 3 + 0] * other.x;
-      result.y += this.elements[0 * 3 + 1] * other.y;
-      result.y += this.elements[0 * 3 + 2];
+      result.x += this.elements[1 * 3 + 0] * other.y;
+      result.x += this.elements[2 * 3 + 0];
+      result.y += this.elements[0 * 3 + 1] * other.x;
+      result.y += this.elements[1 * 3 + 1] * other.y;
+      result.y += this.elements[2 * 3 + 1];
       return result;
     } else {  // Multiply by scalar
       const result = new Mat3();
-      for (let i = 0; i < 9; i++) {
-        result.elements[i] = this.elements[i] * other;
-      }
+      for (let i = 0; i < 9; i++) result.elements[i] = this.elements[i] * other;
       return result;
     }
   }
@@ -175,6 +171,48 @@ export class Mat3 {
       }
     }
     return result;
+  }
+
+  /**
+   * Calculates the determinant of this matrix and returns the result.
+   * @returns The result.
+   */
+  public determinant(): number {
+    return this.elements[0 * 3 + 0] *
+        (this.elements[1 * 3 + 1] * this.elements[2 * 3 + 2] - this.elements[1 * 3 + 2] * this.elements[2 * 3 + 1]) -
+        this.elements[0 * 3 + 1] *
+        (this.elements[1 * 3 + 0] * this.elements[2 * 3 + 2] - this.elements[1 * 3 + 2] * this.elements[2 * 3 + 0]) +
+        this.elements[0 * 3 + 2] *
+        (this.elements[1 * 3 + 0] * this.elements[2 * 3 + 1] - this.elements[1 * 3 + 1] * this.elements[2 * 3 + 0]);
+  }
+
+  /**
+   * Calcultes the adjunt matrix of this matrix and returns the result.
+   * @returns The result.
+   */
+  public adjunt(): Mat3 {
+    const result = new Mat3();
+    const els = this.elements;
+    result.elements[0 * 3 + 0] = els[1 * 3 + 1] * els[2 * 3 + 2] - els[1 * 3 + 2] * els[2 * 3 + 1];
+    result.elements[0 * 3 + 1] = els[0 * 3 + 2] * els[2 * 3 + 1] - els[0 * 3 + 1] * els[2 * 3 + 2];
+    result.elements[0 * 3 + 2] = els[0 * 3 + 1] * els[1 * 3 + 2] - els[0 * 3 + 2] * els[1 * 3 + 1];
+    result.elements[1 * 3 + 0] = els[1 * 3 + 2] * els[2 * 3 + 0] - els[1 * 3 + 0] * els[2 * 3 + 2];
+    result.elements[1 * 3 + 1] = els[0 * 3 + 0] * els[2 * 3 + 2] - els[0 * 3 + 2] * els[2 * 3 + 0];
+    result.elements[1 * 3 + 2] = els[0 * 3 + 2] * els[1 * 3 + 0] - els[0 * 3 + 0] * els[1 * 3 + 2];
+    result.elements[2 * 3 + 0] = els[1 * 3 + 0] * els[2 * 3 + 1] - els[1 * 3 + 1] * els[2 * 3 + 0];
+    result.elements[2 * 3 + 1] = els[0 * 3 + 1] * els[2 * 3 + 0] - els[0 * 3 + 0] * els[2 * 3 + 1];
+    result.elements[2 * 3 + 2] = els[0 * 3 + 0] * els[1 * 3 + 1] - els[0 * 3 + 1] * els[1 * 3 + 0];
+    return result;
+  }
+
+  /**
+   * Calculates the inverse of this matrix and returns the result.
+   * @returns The result.
+   */
+  public inverse(): Mat3 {
+    const det = this.determinant();
+    if (det === 0.0) throw new Error('Cannot invert matrix with determinant 0.');
+    return this.adjunt().mul(1.0 / det);
   }
 
   /**
