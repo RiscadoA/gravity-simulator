@@ -1,13 +1,13 @@
 import {Body} from '../body';
 import {Vec2} from '../math';
-import {View, Renderer} from '../renderer';
+import {Renderer, View} from '../renderer';
 import * as UI from '../ui';
 import {World} from '../world';
 
 import {Tool} from './tool';
 
 /** Velocity multiplier for throwing bodies. */
-const VELOCITY_MULTIPLIER = 0.001;
+const VELOCITY_MULTIPLIER = 0.0001;
 
 /**
  * Tool for adding bodies to the world.
@@ -65,11 +65,13 @@ export class BodyAdder extends Tool {
     if (this.mouseDown) {
       let delta = position.sub(this.mouseDown);
       delta.y *= -1.0;
-      this.body.velocity = delta.mul(VELOCITY_MULTIPLIER * this.view.scale);
+      this.body.velocity = delta.mul(VELOCITY_MULTIPLIER / this.view.scale);
       this.world.addBody(this.body);
-    }
 
-    this.activate();
+      this.mouseDown = null;
+      this.body = new Body();
+      this.body.position = this.view.screenToWorld(position);
+    }
   }
 
   public override onMouseMove(position: Vec2): void {
