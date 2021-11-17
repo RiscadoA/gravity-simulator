@@ -239,4 +239,15 @@ export class Mat3 {
   public static scale(v: Vec2): Mat3 {
     return new Mat3([v.x, 0.0, 0.0, 0.0, v.y, 0.0, 0.0, 0.0, 1.0]);
   }
+
+  /**
+   * Returns the rotation matrix.
+   * @param angle The angle in radians.
+   * @returns The rotation matrix.
+   */
+  public static rotation(angle: number): Mat3 {
+    const c = Math.cos(angle);
+    const s = Math.sin(angle);
+    return new Mat3([c, s, 0.0, -s, c, 0.0, 0.0, 0.0, 1.0]);
+  }
 }
