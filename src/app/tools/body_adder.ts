@@ -7,7 +7,7 @@ import {World} from '../world';
 import {Tool} from './tool';
 
 /** Velocity multiplier for throwing bodies. */
-const VELOCITY_MULTIPLIER = 0.0001;
+const VELOCITY_MULTIPLIER = 0.0004;
 
 /**
  * Tool for adding bodies to the world.
@@ -27,6 +27,9 @@ export class BodyAdder extends Tool {
 
   /** Mouse down position. */
   private mouseDown: Vec2|null;
+
+  /** Mouse position. */
+  private mousePos: Vec2;
 
   /** Has the mouse moved? */
   private mouseMoved: boolean;
@@ -54,6 +57,7 @@ export class BodyAdder extends Tool {
 
     this.body.mass = this.mass.value;
     renderer.drawCircle(this.body.position, this.body.radius, this.body.color);
+    if (this.mouseDown) renderer.drawArrow(this.body.position, this.view.screenToWorld(this.mousePos), this.body.color);
   }
 
   public override onMouseDown(position: Vec2): void {
@@ -65,6 +69,7 @@ export class BodyAdder extends Tool {
     if (this.mouseDown) {
       let delta = position.sub(this.mouseDown);
       delta.y *= -1.0;
+      this.body.position = this.view.screenToWorld(this.mouseDown);
       this.body.velocity = delta.mul(VELOCITY_MULTIPLIER / this.view.scale);
       this.world.addBody(this.body);
 
@@ -75,7 +80,8 @@ export class BodyAdder extends Tool {
   }
 
   public override onMouseMove(position: Vec2): void {
-    if (!this.mouseDown) this.body.position = this.view.screenToWorld(position);
+    this.mousePos = position;
+    if (!this.mouseDown) this.body.position = this.view.screenToWorld(this.mousePos);
     this.mouseMoved = true;
   }
 }
