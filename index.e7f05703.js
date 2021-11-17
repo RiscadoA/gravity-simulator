@@ -798,6 +798,25 @@ class Mat3 {
             1
         ]);
     }
+    /**
+   * Returns the rotation matrix.
+   * @param angle The angle in radians.
+   * @returns The rotation matrix.
+   */ static rotation(angle) {
+        const c = Math.cos(angle);
+        const s = Math.sin(angle);
+        return new Mat3([
+            c,
+            s,
+            0,
+            -s,
+            c,
+            0,
+            0,
+            0,
+            1
+        ]);
+    }
 }
 
 },{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"ciiiV":[function(require,module,exports) {
@@ -841,10 +860,13 @@ parcelHelpers.export(exports, "View", ()=>_view.View
 );
 var _math = require("../math");
 var _color = require("./color");
+var _drawLine = require("./draw_line");
 var _drawCircle = require("./draw_circle");
 var _view = require("./view");
 /** Background color of the application. */ const BACKGROUND_COLOR = new _color.Color(0.05, 0.05, 0.05);
 /** Number of divisions used for drawing circles. */ const CIRCLE_DIVISIONS = 32;
+/** Line thickness scale. */ const LINE_THICKNESS_SCALE = 0.0025;
+/** Arrow head scale. */ const ARROW_HEAD_SCALE = 0.02;
 class Renderer {
     /**
    * @param canvas Canvas to use.
@@ -868,6 +890,29 @@ class Renderer {
         this.commands.push(new _drawCircle.DrawCircle(center, radius, color));
     }
     /**
+   * Draws a line.
+   * @param start The start of the line.
+   * @param end The end of the line.
+   * @param thickness Thickness of the line.
+   * @param color The color of the line.
+   */ drawLine(start, end, thickness, color1) {
+        this.commands.push(new _drawLine.DrawLine(start, end, thickness, color1));
+    }
+    /**
+   * Draws an arrow.
+   * @param start The start of the arrow.
+   * @param end The end of the arrow.
+   * @param color The color of the arrow.
+   */ drawArrow(start1, end1, color2) {
+        const offset = end1.sub(start1);
+        const perpendicular = offset.perpendicular();
+        const diagonal1 = offset.add(perpendicular).normalize();
+        const diagonal2 = offset.sub(perpendicular).normalize();
+        this.drawLine(start1, end1, 1 / this.view.scale, color2);
+        this.drawLine(end1, end1.add(diagonal1.mul(-ARROW_HEAD_SCALE / this.view.scale)), 1 / this.view.scale, color2);
+        this.drawLine(end1, end1.add(diagonal2.mul(-ARROW_HEAD_SCALE / this.view.scale)), 1 / this.view.scale, color2);
+    }
+    /**
    * Flushes the renderer, showing the current state of the app.
    */ flush() {
         // Clear the screen with the background color.
@@ -878,13 +923,24 @@ class Renderer {
         this.context.vertexAttribPointer(this.positionAttribute, 2, this.context.FLOAT, false, 0, 0);
         this.context.enableVertexAttribArray(this.positionAttribute);
         this.context.useProgram(this.program);
-        for (let command of this.commands)if (command instanceof _drawCircle.DrawCircle) {
-            const translation = _math.Mat3.translation(command.center);
-            const scale = _math.Mat3.scale(new _math.Vec2(command.radius, command.radius));
-            const transform = scale.mul(translation).mul(this.view.getTransform());
-            this.context.uniformMatrix3fv(this.transformUniform, false, transform.elements);
-            this.context.uniform3f(this.colorUniform, command.color.r, command.color.g, command.color.b);
-            this.context.drawArrays(this.context.TRIANGLE_FAN, this.circle[0], this.circle[1]);
+        for (let command of this.commands){
+            if (command instanceof _drawCircle.DrawCircle) {
+                const translation = _math.Mat3.translation(command.center);
+                const scale = _math.Mat3.scale(new _math.Vec2(command.radius, command.radius));
+                const transform = scale.mul(translation).mul(this.view.getTransform());
+                this.context.uniformMatrix3fv(this.transformUniform, false, transform.elements);
+                this.context.uniform3f(this.colorUniform, command.color.r, command.color.g, command.color.b);
+                this.context.drawArrays(this.context.TRIANGLE_FAN, this.circle[0], this.circle[1]);
+            } else if (command instanceof _drawLine.DrawLine) {
+                const translation = _math.Mat3.translation(command.start);
+                const direction = command.end.sub(command.start);
+                const scale = _math.Mat3.scale(new _math.Vec2(command.thickness * LINE_THICKNESS_SCALE, direction.length()));
+                const rotation = _math.Mat3.rotation(Math.atan2(direction.y, direction.x) - Math.PI / 2);
+                const transform = scale.mul(rotation).mul(translation).mul(this.view.getTransform());
+                this.context.uniformMatrix3fv(this.transformUniform, false, transform.elements);
+                this.context.uniform3f(this.colorUniform, command.color.r, command.color.g, command.color.b);
+                this.context.drawArrays(this.context.TRIANGLE_FAN, this.line[0], this.line[1]);
+            }
         }
         this.commands = [];
     }
@@ -939,6 +995,15 @@ class Renderer {
             let angle = i / CIRCLE_DIVISIONS * Math.PI * 2;
             vertices.push(Math.cos(angle), Math.sin(angle));
         }
+        // Generate line vertices
+        this.line = [
+            vertices.length / 2,
+            4
+        ];
+        vertices.push(-1, 0);
+        vertices.push(-1, 1);
+        vertices.push(1, 1);
+        vertices.push(1, 0);
         // Generate vertex buffer
         this.vertexBuffer = this.context.createBuffer();
         this.context.bindBuffer(this.context.ARRAY_BUFFER, this.vertexBuffer);
@@ -946,7 +1011,7 @@ class Renderer {
     }
 }
 
-},{"../math":"9zUrS","./color":"ak01f","./draw_circle":"fpeFl","./view":"l5tb4","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"ak01f":[function(require,module,exports) {
+},{"../math":"9zUrS","./color":"ak01f","./draw_circle":"fpeFl","./view":"l5tb4","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV","./draw_line":"cQRBN"}],"ak01f":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 /**
@@ -1113,7 +1178,28 @@ class View {
     }
 }
 
-},{"../math":"9zUrS","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"acJ2D":[function(require,module,exports) {
+},{"../math":"9zUrS","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"cQRBN":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * Represents a command used to draw an line on the screen.
+ */ parcelHelpers.export(exports, "DrawLine", ()=>DrawLine
+);
+class DrawLine {
+    /**
+   * @param start Start position of the line. 
+   * @param end End position of the line.
+   * @param thickness Thickness of the line.
+   * @param color Color of the line.
+   */ constructor(start, end, thickness, color){
+        this.start = start;
+        this.end = end;
+        this.thickness = thickness;
+        this.color = color;
+    }
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"acJ2D":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "Tool", ()=>_tool.Tool
@@ -1148,7 +1234,7 @@ parcelHelpers.defineInteropFlag(exports);
 );
 var _body = require("../body");
 var _tool = require("./tool");
-/** Velocity multiplier for throwing bodies. */ const VELOCITY_MULTIPLIER = 0.0001;
+/** Velocity multiplier for throwing bodies. */ const VELOCITY_MULTIPLIER = 0.0004;
 class BodyAdder extends _tool.Tool {
     /**
    * @param world The world to add bodies to.
@@ -1169,6 +1255,7 @@ class BodyAdder extends _tool.Tool {
         if (!this.mouseMoved) return;
         this.body.mass = this.mass.value;
         renderer.drawCircle(this.body.position, this.body.radius, this.body.color);
+        if (this.mouseDown) renderer.drawArrow(this.body.position, this.view.screenToWorld(this.mousePos), this.body.color);
     }
     onMouseDown(position) {
         this.body.position = this.view.screenToWorld(position);
@@ -1178,6 +1265,7 @@ class BodyAdder extends _tool.Tool {
         if (this.mouseDown) {
             let delta = position1.sub(this.mouseDown);
             delta.y *= -1;
+            this.body.position = this.view.screenToWorld(this.mouseDown);
             this.body.velocity = delta.mul(VELOCITY_MULTIPLIER / this.view.scale);
             this.world.addBody(this.body);
             this.mouseDown = null;
@@ -1186,7 +1274,8 @@ class BodyAdder extends _tool.Tool {
         }
     }
     onMouseMove(position2) {
-        if (!this.mouseDown) this.body.position = this.view.screenToWorld(position2);
+        this.mousePos = position2;
+        if (!this.mouseDown) this.body.position = this.view.screenToWorld(this.mousePos);
         this.mouseMoved = true;
     }
 }
@@ -1211,7 +1300,7 @@ class Body {
         this.mass = 1;
         this.position = new _math.Vec2(0, 0);
         this.velocity = new _math.Vec2(0, 0);
-        this.color = _color.Color.random();
+        this.color = _color.Color.random().mul(0.8).add(new _color.Color(0.2, 0.2, 0.2));
     }
     /**
    * Gets the body's position.
