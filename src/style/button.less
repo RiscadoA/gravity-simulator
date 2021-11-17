@@ -1,0 +1,25 @@
+@button        : #026cb3;
+@button-hover  : #2aaaff;
+@button-active : #0099ff;
+
+button {
+  padding       : 0.2em 0.4em;
+  background    : @button;
+  border        : 2px solid white;
+  border-radius : 6px;
+  pointer-events: auto;
+  box-sizing    : border-box;
+  cursor        : pointer;
+}
+
+button:hover {
+  background: @button-hover;
+}
+
+button:active {
+  background: @button-active;
+}
+
+button.on {
+  background: @button-active
+}

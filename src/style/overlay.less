@@ -1,9 +1,3 @@
-@button            : #026cb3;
-@button-hover      : #2aaaff;
-@button-active     : #0099ff;
-@input-range       : #585858;
-@input-range-value : #3a3a3a;
-
 div.overlay {
   position      : absolute;
   width         : 100%;
@@ -33,49 +27,9 @@ div.overlay>div.end {
 }
 
 div.overlay button {
-  height        : 100%;
-  padding       : 0.2em 0.4em;
-  background    : @button;
-  border        : 2px solid white;
-  border-radius : 6px;
-  pointer-events: auto;
-  cursor        : pointer;
-
+  height: 100%;
 }
 
-.overlay button:hover {
-  background: @button-hover;
-}
-
-.overlay button:active {
-  background: @button-active;
-}
-
-.overlay button.on {
-  background: @button-active;
-}
-
-div.overlay div.range {
-  max-height    : 100%;
-  padding       : 0.2em 0.4em;
-  background    : @input-range;
-  border        : 2px solid white;
-  border-radius : 6px;
-  pointer-events: auto;
-}
-
-div.overlay div.range>input {
-  display         : inline-block;
-  vertical-align  : middle;
-  background-color: transparent;
-}
-
-div.overlay div.range>div.value {
-  display         : inline-block;
-  vertical-align  : middle;
-  text-align      : right;
-  width           : 7ch;
-  background-color: @input-range-value;
-  border-radius   : 4px;
-  padding         : 0 0.2em;
+div.overlay div.slider {
+  max-height: 100%;
 }
