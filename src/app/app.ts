@@ -8,6 +8,9 @@ import {World} from './world';
 /** Multiplier of the time step passed to the update functions. */
 const TIME_SCALE = 0.000005;
 
+/** Help page URL. */
+const HELP_URL = 'https://riscadoa.com/portfolio/gravity-simulator/';
+
 /**
  * Application class.
  */
@@ -38,6 +41,9 @@ export class App {
 
   /** Zoom out button. */
   private zoomOutButton: UI.Button;
+
+  /** Help button. */
+  private helpButton: UI.Button;
 
   /** Body adder toggle. */
   private bodyAdderToggle: UI.Toggle;
@@ -110,6 +116,7 @@ export class App {
     this.settingsButton = new UI.Button(document.getElementById('settingsButton') as HTMLButtonElement);
     this.zoomInButton = new UI.Button(document.getElementById('zoomInButton') as HTMLButtonElement);
     this.zoomOutButton = new UI.Button(document.getElementById('zoomOutButton') as HTMLButtonElement);
+    this.helpButton = new UI.Button(document.getElementById('helpButton') as HTMLButtonElement);
 
     // Initialize UI toggles
     this.bodyAdderToggle = new UI.Toggle(document.getElementById('bodyAdderToggle') as HTMLButtonElement);
@@ -140,7 +147,12 @@ export class App {
     this.zoomOutButton.setOnClick(() => {
       this.renderer.view.zoom(1.25);
     });
-    
+
+    // Help callback
+    this.helpButton.setOnClick(() => {
+      window.open(HELP_URL);
+    });
+
     // Initialize preset selector
     this.presetSelector = new Presets.Selector(this.world);
     this.presetSelector.add(new Presets.Empty());
