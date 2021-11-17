@@ -1,0 +1,25 @@
+<div class="form">
+  <div id="selector" class="hidden">
+    <h1>Select a preset</h1>
+    <hr>
+    <div class="switch">
+      <button id="empty">Empty</button>
+      <button id="simpleStarSystem">Simple star system</button>
+      <button id="customStarSystem">Custom star system</button>
+    </div>
+    <button id="cancel">Cancel</button>
+    <button id="submit">Okay</button>
+  </div>
+  <div id="customStarSystem" class="hidden">
+    <h1>Custom star system</h1>
+    <hr>
+    <include src="src/partials/slider.html" locals='{"id": "starMass", "text": "Star Mass"}'></include>
+    <include src="src/partials/slider.html" locals='{"id": "bodyCount", "text": "Body Count"}'></include>
+    <include src="src/partials/slider.html" locals='{"id": "bodyMinMass", "text": "Smallest Mass"}'></include>
+    <include src="src/partials/slider.html" locals='{"id": "bodyMaxMass", "text": "Largest Mass"}'></include>
+    <include src="src/partials/slider.html" locals='{"id": "bodyMinDistance", "text": "Closest Distance"}'></include>
+    <include src="src/partials/slider.html" locals='{"id": "bodyMaxDistance", "text": "Farthest Distance"}'></include>
+    <button id="cancel">Cancel</button>
+    <button id="submit">Okay</button>
+  </div>
+</div>
