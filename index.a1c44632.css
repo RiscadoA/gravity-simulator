@@ -185,7 +185,8 @@ div.form > div > h1 {
   margin-bottom: 0;
 }
 div.form > div > hr {
-  border: 1px solid #fff;
+  border: 0;
+  border-top: 2px solid #fff;
 }
 div.form > div > div.switch {
   display: flex;
