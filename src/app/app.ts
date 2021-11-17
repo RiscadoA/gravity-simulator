@@ -6,7 +6,7 @@ import * as UI from './ui';
 import {World} from './world';
 
 /** Multiplier of the time step passed to the update functions. */
-const TIME_SCALE = 0.00001;
+const TIME_SCALE = 0.000005;
 
 /**
  * Application class.
@@ -24,11 +24,8 @@ export class App {
   /** Current tool. */
   private tool: Tools.Tool|undefined;
 
-  /** Presets map. */
-  private presets: Map<string, Presets.Preset>;
-
-  /** Current preset. */
-  private preset: Presets.Preset|undefined;
+  /** Preset selector. */
+  private presetSelector: Presets.Selector;
 
   /** Reset button. */
   private resetButton: UI.Button;
@@ -36,23 +33,29 @@ export class App {
   /** Settings button. */
   private settingsButton: UI.Button;
 
-  /** Add body toggle. */
-  private addBodyToggle: UI.Toggle;
+  /** Zoom in button. */
+  private zoomInButton: UI.Button;
 
-  /** Remove body toggle. */
-  private removeBodyToggle: UI.Toggle;
+  /** Zoom out button. */
+  private zoomOutButton: UI.Button;
 
-  /** Move camera toggle. */
-  private moveCameraToggle: UI.Toggle;
+  /** Body adder toggle. */
+  private bodyAdderToggle: UI.Toggle;
+
+  /** Body remover toggle. */
+  private bodyRemoverToggle: UI.Toggle;
+
+  /** Camera mover toggle. */
+  private cameraMoverToggle: UI.Toggle;
 
   /** Tools switch. */
   private toolSwitch: UI.Switch;
 
   /** Simulation speed slider. */
-  private speed: UI.Slider;
+  private simulationSpeed: UI.Slider;
 
   /** New body mass slider. */
-  private mass: UI.Slider;
+  private bodyMass: UI.Slider;
 
   /** Last mouse position. */
   private mousePos: Vec2;
@@ -95,61 +98,66 @@ export class App {
     });
 
     // Initialize UI sliders
-    this.speed = new UI.Slider(
-        document.getElementById('speedInput') as HTMLInputElement, document.getElementById('speedValue') as HTMLElement,
-        'exponential');
-    this.speed.value = 1.0;
-    this.mass = new UI.Slider(
-        document.getElementById('massInput') as HTMLInputElement, document.getElementById('massValue') as HTMLElement,
-        'exponential');
-    this.mass.value = 1.0;
+    this.bodyMass =
+        new UI.Slider(document.getElementById('bodyMass') as HTMLDivElement, 0.1, 100000000.0, 1.0, 'exponential');
+    this.bodyMass.value = 1.0;
+    this.simulationSpeed =
+        new UI.Slider(document.getElementById('simulationSpeed') as HTMLDivElement, 0.01, 100.0, 1.0, 'exponential');
+    this.simulationSpeed.value = 1.0;
 
     // Initialize UI buttons
     this.resetButton = new UI.Button(document.getElementById('resetButton') as HTMLButtonElement);
     this.settingsButton = new UI.Button(document.getElementById('settingsButton') as HTMLButtonElement);
+    this.zoomInButton = new UI.Button(document.getElementById('zoomInButton') as HTMLButtonElement);
+    this.zoomOutButton = new UI.Button(document.getElementById('zoomOutButton') as HTMLButtonElement);
 
     // Initialize UI toggles
-    this.addBodyToggle = new UI.Toggle(document.getElementById('addBodyToggle') as HTMLButtonElement);
-    this.removeBodyToggle = new UI.Toggle(document.getElementById('removeBodyToggle') as HTMLButtonElement);
-    this.moveCameraToggle = new UI.Toggle(document.getElementById('moveCameraToggle') as HTMLButtonElement);
+    this.bodyAdderToggle = new UI.Toggle(document.getElementById('bodyAdderToggle') as HTMLButtonElement);
+    this.bodyRemoverToggle = new UI.Toggle(document.getElementById('bodyRemoverToggle') as HTMLButtonElement);
+    this.cameraMoverToggle = new UI.Toggle(document.getElementById('cameraMoverToggle') as HTMLButtonElement);
 
     // Initialize tools
     this.tools = new Map<string, Tools.Tool>();
-    this.tools.set('addBody', new Tools.BodyAdder(this.world, this.renderer.view, this.mass));
-    this.tools.set('removeBody', new Tools.BodyRemover(this.world, this.renderer.view));
-    this.tools.set('moveCamera', new Tools.CameraMover(this.renderer.view));
+    this.tools.set('bodyAdder', new Tools.BodyAdder(this.world, this.renderer.view, this.bodyMass));
+    this.tools.set('bodyRemover', new Tools.BodyRemover(this.world, this.renderer.view));
+    this.tools.set('cameraMover', new Tools.CameraMover(this.renderer.view));
     this.tool = undefined;
 
     // Intiailize UI tool switch
     this.toolSwitch = new UI.Switch();
-    this.toolSwitch.add('addBody', this.addBodyToggle);
-    this.toolSwitch.add('removeBody', this.removeBodyToggle);
-    this.toolSwitch.add('moveCamera', this.moveCameraToggle);
+    this.toolSwitch.add('bodyAdder', this.bodyAdderToggle);
+    this.toolSwitch.add('bodyRemover', this.bodyRemoverToggle);
+    this.toolSwitch.add('cameraMover', this.cameraMoverToggle);
     this.toolSwitch.setOnStateChange(tool => {
       this.tool = this.tools.get(tool);
       if (this.tool) this.tool.activate();
     });
 
-    // Initialie presets
-    this.presets = new Map<string, Presets.Preset>();
-    this.preset = undefined;
+    // Zoom callbacks
+    this.zoomInButton.setOnClick(() => {
+      this.renderer.view.zoom(0.75);
+    });
+    this.zoomOutButton.setOnClick(() => {
+      this.renderer.view.zoom(1.25);
+    });
+    
+    // Initialize preset selector
+    this.presetSelector = new Presets.Selector(this.world);
+    this.presetSelector.add(new Presets.Empty());
+    this.presetSelector.add(new Presets.SimpleStarSystem());
+    this.presetSelector.add(new Presets.CustomStarSystem());
+    this.presetSelector.finish('simpleStarSystem');
     this.resetButton.setOnClick(() => {
       this.world.clear();
-      if (this.preset) this.preset.generate(this.world);
+      this.presetSelector.apply();
     });
-
-    // Create a few bodies.
-    /*const CENTRAL_MASS = 1000.0;
-    this.world.addBody(new Body(CENTRAL_MASS, new Vec2(0.0, 0.0), new Vec2(0.0, 0.0), Color.random()));
-
-    for (let i = 0; i < 100; ++i) {
-      const mass = 0.1;
-      const angle = (i / 100.0) * Math.PI * 2;
-      const distance = 1.0;
-      const pos = new Vec2(Math.cos(angle) * distance, Math.sin(angle) * distance);
-      const vel = pos.perpendicular().normalize().mul(Math.sqrt(GRAVITY_CONSTANT * (CENTRAL_MASS) / distance));
-      this.world.addBody(new Body(mass, pos, vel, Color.random()));
-    }*/
+    this.settingsButton.setOnClick(() => {
+      if (this.presetSelector.open)
+        this.presetSelector.hide();
+      else
+        this.presetSelector.show();
+    });
+    this.presetSelector.apply();
   }
 
   /**
@@ -164,7 +172,7 @@ export class App {
    * @param dt Time step in milliseconds.
    */
   private animate(dt: number): void {
-    this.world.update(this.speed.value * dt * TIME_SCALE);
+    this.world.update(this.simulationSpeed.value * dt * TIME_SCALE);
 
     if (this.tool) this.tool.draw(this.renderer);
     this.world.draw(this.renderer);
