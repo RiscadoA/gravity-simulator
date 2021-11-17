@@ -148,6 +148,7 @@ export class App {
     this.presetSelector.add(new Presets.CustomStarSystem());
     this.presetSelector.finish('simpleStarSystem');
     this.resetButton.setOnClick(() => {
+      this.renderer.view.reset();
       this.world.clear();
       this.presetSelector.apply();
     });

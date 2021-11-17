@@ -27,13 +27,11 @@ export class View {
 
   // Default constructor
   constructor(width: number, height: number) {
-    this.position = new Vec2(0.0, 0.0);
-    this._scale = 1.0;
     this.aspectRatio = height / width;
     this.width = width;
     this.height = height;
-    this.updateTransform();
     this.onZoomChangeCallback = () => {};
+    this.reset();
   }
 
   /**
@@ -67,6 +65,14 @@ export class View {
    */
   public get scale(): number {
     return this._scale;
+  }
+
+  /**
+   * Resets this view.
+   */
+  public reset(): void {
+    this.position = new Vec2(0.0, 0.0);
+    this.scale = 0.5;
   }
 
   /**
