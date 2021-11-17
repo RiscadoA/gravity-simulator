@@ -83,6 +83,49 @@ input[type=range]:focus::-ms-fill-lower {
 input[type=range]:focus::-ms-fill-upper {
   background: #ffffff;
 }
+div.slider {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.2em 0.4em;
+  background: #585858;
+  border: 2px solid white;
+  border-radius: 6px;
+  pointer-events: auto;
+}
+div.slider > input {
+  flex: 0;
+  background-color: transparent;
+}
+div.slider > span {
+  flex: 1;
+}
+div.slider > div {
+  flex: 0;
+  text-align: right;
+  min-width: 7ch;
+  background-color: #3a3a3a;
+  border-radius: 4px;
+  padding: 0 0.2em;
+}
+button {
+  padding: 0.2em 0.4em;
+  background: #026cb3;
+  border: 2px solid white;
+  border-radius: 6px;
+  pointer-events: auto;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+button:hover {
+  background: #2aaaff;
+}
+button:active {
+  background: #0099ff;
+}
+button.on {
+  background: #0099ff;
+}
 div.overlay {
   position: absolute;
   width: 100%;
@@ -110,43 +153,72 @@ div.overlay > div.end {
 }
 div.overlay button {
   height: 100%;
-  padding: 0.2em 0.4em;
-  background: #026cb3;
-  border: 2px solid white;
-  border-radius: 6px;
-  pointer-events: auto;
-  cursor: pointer;
 }
-.overlay button:hover {
-  background: #2aaaff;
-}
-.overlay button:active {
-  background: #0099ff;
-}
-.overlay button.on {
-  background: #0099ff;
-}
-div.overlay div.range {
+div.overlay div.slider {
   max-height: 100%;
-  padding: 0.2em 0.4em;
-  background: #585858;
-  border: 2px solid white;
-  border-radius: 6px;
+}
+div.form {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: transparent;
+  pointer-events: none;
+}
+div.form > div.hidden {
+  display: none;
+}
+div.form > div {
   pointer-events: auto;
+  background: #585858;
+  border-radius: 6px;
+  border: 2px solid #fff;
+  padding: 0.25em;
 }
-div.overlay div.range > input {
-  display: inline-block;
-  vertical-align: middle;
-  background-color: transparent;
+div.form > div > * {
+  margin: 0.5em 0.25em;
 }
-div.overlay div.range > div.value {
-  display: inline-block;
-  vertical-align: middle;
-  text-align: right;
-  width: 7ch;
-  background-color: #3a3a3a;
-  border-radius: 4px;
-  padding: 0 0.2em;
+div.form > div > h1 {
+  margin-top: 0.25em;
+  margin-bottom: 0;
+}
+div.form > div > hr {
+  border: 1px solid #fff;
+}
+div.form > div > div.switch {
+  display: flex;
+  align-content: stretch;
+  flex-direction: column;
+  gap: 0.5em;
+}
+div.form > div > div.switch > button {
+  display: block;
+}
+div.form > div > button#cancel {
+  margin-top: 0;
+  margin-bottom: 0.25em;
+  float: left;
+  background-color: #ca0000;
+}
+div.form > div > button#cancel:hover {
+  background-color: #e40000;
+}
+div.form > div > button#cancel:active {
+  background-color: #d60101;
+}
+div.form > div > button#submit {
+  margin-top: 0;
+  margin-bottom: 0.25em;
+  float: right;
+  background-color: #009e00;
+}
+div.form > div > button#submit:hover {
+  background-color: #00c400;
+}
+div.form > div > button#submit:active {
+  background-color: #00b400;
 }
 * {
   font-size: 1em;
