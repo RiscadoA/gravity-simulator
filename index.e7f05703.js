@@ -479,6 +479,7 @@ var _tools = require("./tools");
 var _ui = require("./ui");
 var _world = require("./world");
 /** Multiplier of the time step passed to the update functions. */ const TIME_SCALE = 0.000005;
+/** Help page URL. */ const HELP_URL = 'https://riscadoa.com/portfolio/gravity-simulator/';
 class App {
     // Default constructor.
     constructor(){
@@ -523,6 +524,7 @@ class App {
         this.settingsButton = new _ui.Button(document.getElementById('settingsButton'));
         this.zoomInButton = new _ui.Button(document.getElementById('zoomInButton'));
         this.zoomOutButton = new _ui.Button(document.getElementById('zoomOutButton'));
+        this.helpButton = new _ui.Button(document.getElementById('helpButton'));
         // Initialize UI toggles
         this.bodyAdderToggle = new _ui.Toggle(document.getElementById('bodyAdderToggle'));
         this.bodyRemoverToggle = new _ui.Toggle(document.getElementById('bodyRemoverToggle'));
@@ -548,6 +550,10 @@ class App {
         });
         this.zoomOutButton.setOnClick(()=>{
             this.renderer.view.zoom(1.25);
+        });
+        // Help callback
+        this.helpButton.setOnClick(()=>{
+            window.open(HELP_URL);
         });
         // Initialize preset selector
         this.presetSelector = new _presets.Selector(this.world);
