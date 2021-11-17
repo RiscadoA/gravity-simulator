@@ -556,6 +556,7 @@ class App {
         this.presetSelector.add(new _presets.CustomStarSystem());
         this.presetSelector.finish('simpleStarSystem');
         this.resetButton.setOnClick(()=>{
+            this.renderer.view.reset();
             this.world.clear();
             this.presetSelector.apply();
         });
@@ -1107,14 +1108,12 @@ var _math = require("../math");
 class View {
     // Default constructor
     constructor(width, height){
-        this.position = new _math.Vec2(0, 0);
-        this._scale = 1;
         this.aspectRatio = height / width;
         this.width = width;
         this.height = height;
-        this.updateTransform();
         this.onZoomChangeCallback = ()=>{
         };
+        this.reset();
     }
     /**
    * Gets the transform matrix.
@@ -1140,6 +1139,12 @@ class View {
    * Gets the view's scale.
    */ get scale() {
         return this._scale;
+    }
+    /**
+   * Resets this view.
+   */ reset() {
+        this.position = new _math.Vec2(0, 0);
+        this.scale = 0.5;
     }
     /**
    * Moves the view by a given amount.
