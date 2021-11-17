@@ -157,6 +157,9 @@ div.overlay button {
 div.overlay div.slider {
   max-height: 100%;
 }
+button#bodyAdderToggle:not(.on) ~ div.slider#bodyMass {
+  display: none;
+}
 div.form {
   position: absolute;
   width: 100%;

@@ -601,7 +601,7 @@ class App {
     }
 }
 
-},{"./math":"9zUrS","./renderer":"bK5TX","./tools":"acJ2D","./ui":"eFpQJ","./world":"8br0T","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV","./presets":"b365J"}],"9zUrS":[function(require,module,exports) {
+},{"./math":"9zUrS","./presets":"b365J","./renderer":"bK5TX","./tools":"acJ2D","./ui":"eFpQJ","./world":"8br0T","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"9zUrS":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 /**
@@ -850,918 +850,7 @@ exports.export = function(dest, destName, get) {
     });
 };
 
-},{}],"bK5TX":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "View", ()=>_view.View
-);
-/**
- * Class used to render the app.
- */ parcelHelpers.export(exports, "Renderer", ()=>Renderer
-);
-var _math = require("../math");
-var _color = require("./color");
-var _drawLine = require("./draw_line");
-var _drawCircle = require("./draw_circle");
-var _view = require("./view");
-/** Background color of the application. */ const BACKGROUND_COLOR = new _color.Color(0.05, 0.05, 0.05);
-/** Number of divisions used for drawing circles. */ const CIRCLE_DIVISIONS = 32;
-/** Line thickness scale. */ const LINE_THICKNESS_SCALE = 0.0025;
-/** Arrow head scale. */ const ARROW_HEAD_SCALE = 0.02;
-class Renderer {
-    /**
-   * @param canvas Canvas to use.
-   */ constructor(canvas){
-        this.commands = [];
-        // Get the WebGL context.
-        this.canvas = canvas;
-        this.context = this.canvas.getContext('webgl');
-        // Initialize shaders and vertex buffers.
-        this.initShaders();
-        this.initVertexBuffers();
-        // Initialize view.
-        this.view = new _view.View(this.canvas.width, this.canvas.height);
-    }
-    /**
-   * Draws a circle.
-   * @param center The center of the circle.
-   * @param radius The radius of the circle.
-   * @param color The color of the circle.
-   */ drawCircle(center, radius, color) {
-        this.commands.push(new _drawCircle.DrawCircle(center, radius, color));
-    }
-    /**
-   * Draws a line.
-   * @param start The start of the line.
-   * @param end The end of the line.
-   * @param thickness Thickness of the line.
-   * @param color The color of the line.
-   */ drawLine(start, end, thickness, color1) {
-        this.commands.push(new _drawLine.DrawLine(start, end, thickness, color1));
-    }
-    /**
-   * Draws an arrow.
-   * @param start The start of the arrow.
-   * @param end The end of the arrow.
-   * @param color The color of the arrow.
-   */ drawArrow(start1, end1, color2) {
-        const offset = end1.sub(start1);
-        const perpendicular = offset.perpendicular();
-        const diagonal1 = offset.add(perpendicular).normalize();
-        const diagonal2 = offset.sub(perpendicular).normalize();
-        this.drawLine(start1, end1, 1 / this.view.scale, color2);
-        this.drawLine(end1, end1.add(diagonal1.mul(-ARROW_HEAD_SCALE / this.view.scale)), 1 / this.view.scale, color2);
-        this.drawLine(end1, end1.add(diagonal2.mul(-ARROW_HEAD_SCALE / this.view.scale)), 1 / this.view.scale, color2);
-    }
-    /**
-   * Flushes the renderer, showing the current state of the app.
-   */ flush() {
-        // Clear the screen with the background color.
-        this.context.clearColor(BACKGROUND_COLOR.r, BACKGROUND_COLOR.g, BACKGROUND_COLOR.b, 1);
-        this.context.clear(this.context.COLOR_BUFFER_BIT);
-        // Execute all draw commands.
-        this.context.bindBuffer(this.context.ARRAY_BUFFER, this.vertexBuffer);
-        this.context.vertexAttribPointer(this.positionAttribute, 2, this.context.FLOAT, false, 0, 0);
-        this.context.enableVertexAttribArray(this.positionAttribute);
-        this.context.useProgram(this.program);
-        for (let command of this.commands){
-            if (command instanceof _drawCircle.DrawCircle) {
-                const translation = _math.Mat3.translation(command.center);
-                const scale = _math.Mat3.scale(new _math.Vec2(command.radius, command.radius));
-                const transform = scale.mul(translation).mul(this.view.getTransform());
-                this.context.uniformMatrix3fv(this.transformUniform, false, transform.elements);
-                this.context.uniform3f(this.colorUniform, command.color.r, command.color.g, command.color.b);
-                this.context.drawArrays(this.context.TRIANGLE_FAN, this.circle[0], this.circle[1]);
-            } else if (command instanceof _drawLine.DrawLine) {
-                const translation = _math.Mat3.translation(command.start);
-                const direction = command.end.sub(command.start);
-                const scale = _math.Mat3.scale(new _math.Vec2(command.thickness * LINE_THICKNESS_SCALE, direction.length()));
-                const rotation = _math.Mat3.rotation(Math.atan2(direction.y, direction.x) - Math.PI / 2);
-                const transform = scale.mul(rotation).mul(translation).mul(this.view.getTransform());
-                this.context.uniformMatrix3fv(this.transformUniform, false, transform.elements);
-                this.context.uniform3f(this.colorUniform, command.color.r, command.color.g, command.color.b);
-                this.context.drawArrays(this.context.TRIANGLE_FAN, this.line[0], this.line[1]);
-            }
-        }
-        this.commands = [];
-    }
-    /**
-   * Initializes shaders used for drawing.
-   */ initShaders() {
-        // Create vertex shader.
-        this.vertexShader = this.context.createShader(this.context.VERTEX_SHADER);
-        this.context.shaderSource(this.vertexShader, `
-      attribute vec2 position;
-
-      uniform mat3 transform;
-
-      void main() {
-        vec2 transformed = (transform * vec3(position, 1.0)).xy;
-        gl_Position = vec4(transformed, 0.0, 1.0);
-      }
-    `);
-        this.context.compileShader(this.vertexShader);
-        // Create fragment shader.
-        this.fragmentShader = this.context.createShader(this.context.FRAGMENT_SHADER);
-        this.context.shaderSource(this.fragmentShader, `
-      uniform mediump vec3 color;
-
-      void main() {
-        gl_FragColor = vec4(color, 1.0);
-      }
-    `);
-        this.context.compileShader(this.fragmentShader);
-        // Create shader program.
-        this.program = this.context.createProgram();
-        this.context.attachShader(this.program, this.vertexShader);
-        this.context.attachShader(this.program, this.fragmentShader);
-        this.context.linkProgram(this.program);
-        // Get shader program attribute locations.
-        this.positionAttribute = this.context.getAttribLocation(this.program, 'position');
-        // Get shader program uniform locations.
-        this.transformUniform = this.context.getUniformLocation(this.program, 'transform');
-        this.colorUniform = this.context.getUniformLocation(this.program, 'color');
-    }
-    /**
-   * Initializes vertex buffers used for drawing.
-   */ initVertexBuffers() {
-        // Generate circle vertices
-        this.circle = [
-            0,
-            CIRCLE_DIVISIONS + 2
-        ];
-        let vertices = [];
-        vertices.push(0, 0);
-        for(let i = 0; i <= CIRCLE_DIVISIONS; i++){
-            let angle = i / CIRCLE_DIVISIONS * Math.PI * 2;
-            vertices.push(Math.cos(angle), Math.sin(angle));
-        }
-        // Generate line vertices
-        this.line = [
-            vertices.length / 2,
-            4
-        ];
-        vertices.push(-1, 0);
-        vertices.push(-1, 1);
-        vertices.push(1, 1);
-        vertices.push(1, 0);
-        // Generate vertex buffer
-        this.vertexBuffer = this.context.createBuffer();
-        this.context.bindBuffer(this.context.ARRAY_BUFFER, this.vertexBuffer);
-        this.context.bufferData(this.context.ARRAY_BUFFER, new Float32Array(vertices), this.context.STATIC_DRAW);
-    }
-}
-
-},{"../math":"9zUrS","./color":"ak01f","./draw_circle":"fpeFl","./view":"l5tb4","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV","./draw_line":"cQRBN"}],"ak01f":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-/**
- * Describes a color.
- */ parcelHelpers.export(exports, "Color", ()=>Color
-);
-class Color {
-    /**
-   * @param r The red component of the color.
-   * @param g The green component of the color.
-   * @param b The blue component of the color.
-   * @param a The alpha component of the color.
-   */ constructor(r, g, b, a = 1){
-        this.r = r;
-        this.g = g;
-        this.b = b;
-        this.a = a;
-    }
-    /**
-   * Adds the given color to this color, returning a new color.
-   * @param other The color to add.
-   * @returns The new color.
-   */ add(other) {
-        const r = Math.min(1, this.r + other.r);
-        const g = Math.min(1, this.g + other.g);
-        const b = Math.min(1, this.b + other.b);
-        const a = Math.min(1, this.a + other.a);
-        return new Color(r, g, b, a);
-    }
-    /**
-   * Mixes this color with the given color, returning a new color.
-   * @param other The color to mix with.
-   * @returns The new color.
-   */ mix(other1) {
-        const r = (this.r + other1.r) / 2;
-        const g = (this.g + other1.g) / 2;
-        const b = (this.b + other1.b) / 2;
-        const a = (this.a + other1.a) / 2;
-        return new Color(r, g, b, a);
-    }
-    /**
-   * Multiplies this color by a scalar, returning a new color.
-   * @param multiplier The scalar to multiply by.
-   * @returns The new color.
-   */ mul(multiplier) {
-        const r = Math.min(1, this.r * multiplier);
-        const g = Math.min(1, this.g * multiplier);
-        const b = Math.min(1, this.b * multiplier);
-        return new Color(r, g, b, this.a);
-    }
-    /**
-   * Divides this color by a scalar, returning a new color.
-   * @param divider The scalar to divide by.
-   * @returns The new color.
-   */ div(divider) {
-        return this.mul(1 / divider);
-    }
-    /**
-   * Generates a random color.
-   * @returns A random color.
-   */ static random() {
-        return new Color(Math.random(), Math.random(), Math.random());
-    }
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"fpeFl":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-/**
- * Represents a command used to draw a circle.
- */ parcelHelpers.export(exports, "DrawCircle", ()=>DrawCircle
-);
-class DrawCircle {
-    /**
-   * @param center Position of the circle center. 
-   * @param radius Radius of the circle.
-   * @param color Color of the circle.
-   */ constructor(center, radius, color){
-        this.center = center;
-        this.radius = radius;
-        this.color = color;
-    }
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"l5tb4":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-/**
- * A view is a 2D camera that can be used to render a scene.
- */ parcelHelpers.export(exports, "View", ()=>View
-);
-var _math = require("../math");
-class View {
-    // Default constructor
-    constructor(width, height){
-        this.aspectRatio = height / width;
-        this.width = width;
-        this.height = height;
-        this.onZoomChangeCallback = ()=>{
-        };
-        this.reset();
-    }
-    /**
-   * Gets the transform matrix.
-   * @returns The transform matrix.
-   */ getTransform() {
-        return this.transform;
-    }
-    /**
-   * Sets the view's position.
-   * @param position The new position.
-   */ setPosition(position) {
-        this.position = position;
-        this.updateTransform();
-    }
-    /**
-   * Sets the view's scale.
-   */ set scale(scale) {
-        this._scale = scale;
-        this.updateTransform();
-        this.onZoomChangeCallback();
-    }
-    /**
-   * Gets the view's scale.
-   */ get scale() {
-        return this._scale;
-    }
-    /**
-   * Resets this view.
-   */ reset() {
-        this.position = new _math.Vec2(0, 0);
-        this.scale = 0.5;
-    }
-    /**
-   * Moves the view by a given amount.
-   * @param delta The amount to move.
-   */ move(delta) {
-        this.setPosition(this.position.add(delta.div(this.scale)));
-    }
-    /**
-   * Zooms the view in.
-   * @param factor The zoom factor.
-   */ zoom(multiplier) {
-        this.scale /= multiplier;
-    }
-    /**
-   * Converts from screen coordinates to world coordinates.
-   * @param screen The screen coordinates.
-   * @return The world coordinates.
-   */ screenToWorld(screen) {
-        let normalized = new _math.Vec2(screen.x / this.width, screen.y / this.height);
-        normalized = normalized.sub(new _math.Vec2(0.5, 0.5)).mul(2);
-        normalized.y *= -1;
-        return this.transform.inverse().mul(normalized);
-    }
-    /**
-   * Sets the zoom change callback.
-   * @param callback The callback.
-   */ setOnZoomChange(callback) {
-        this.onZoomChangeCallback = callback;
-    }
-    /**
-   * Updates the transform matrix.
-   */ updateTransform() {
-        const translation = _math.Mat3.translation(new _math.Vec2(this.position.x, this.position.y));
-        const scale = _math.Mat3.scale(new _math.Vec2(this.scale * this.aspectRatio, this.scale));
-        this.transform = translation.mul(scale);
-    }
-}
-
-},{"../math":"9zUrS","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"cQRBN":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-/**
- * Represents a command used to draw an line on the screen.
- */ parcelHelpers.export(exports, "DrawLine", ()=>DrawLine
-);
-class DrawLine {
-    /**
-   * @param start Start position of the line. 
-   * @param end End position of the line.
-   * @param thickness Thickness of the line.
-   * @param color Color of the line.
-   */ constructor(start, end, thickness, color){
-        this.start = start;
-        this.end = end;
-        this.thickness = thickness;
-        this.color = color;
-    }
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"acJ2D":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "Tool", ()=>_tool.Tool
-);
-parcelHelpers.export(exports, "BodyAdder", ()=>_bodyAdder.BodyAdder
-);
-parcelHelpers.export(exports, "BodyRemover", ()=>_bodyRemover.BodyRemover
-);
-parcelHelpers.export(exports, "CameraMover", ()=>_cameraMover.CameraMover
-);
-var _tool = require("./tool");
-var _bodyAdder = require("./body_adder");
-var _bodyRemover = require("./body_remover");
-var _cameraMover = require("./camera_mover");
-
-},{"./tool":"5kQCS","./body_adder":"3vvBg","./body_remover":"9vhWm","./camera_mover":"c6DGr","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"5kQCS":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-/**
- * Generic tool class.
- */ parcelHelpers.export(exports, "Tool", ()=>Tool
-);
-class Tool {
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"3vvBg":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-/**
- * Tool for adding bodies to the world.
- */ parcelHelpers.export(exports, "BodyAdder", ()=>BodyAdder
-);
-var _body = require("../body");
-var _tool = require("./tool");
-/** Velocity multiplier for throwing bodies. */ const VELOCITY_MULTIPLIER = 0.0004;
-class BodyAdder extends _tool.Tool {
-    /**
-   * @param world The world to add bodies to.
-   * @param view The view being used to render.
-   * @param mass The slider which indicates the body's mass.
-   */ constructor(world, view, mass){
-        super();
-        this.world = world;
-        this.view = view;
-        this.mass = mass;
-    }
-    activate() {
-        this.body = new _body.Body();
-        this.mouseDown = null;
-        this.mouseMoved = false;
-    }
-    draw(renderer) {
-        if (!this.mouseMoved) return;
-        this.body.mass = this.mass.value;
-        renderer.drawCircle(this.body.position, this.body.radius, this.body.color);
-        if (this.mouseDown) renderer.drawArrow(this.body.position, this.view.screenToWorld(this.mousePos), this.body.color);
-    }
-    onMouseDown(position) {
-        this.body.position = this.view.screenToWorld(position);
-        this.mouseDown = position;
-    }
-    onMouseUp(position1) {
-        if (this.mouseDown) {
-            let delta = position1.sub(this.mouseDown);
-            delta.y *= -1;
-            this.body.position = this.view.screenToWorld(this.mouseDown);
-            this.body.velocity = delta.mul(VELOCITY_MULTIPLIER / this.view.scale);
-            this.world.addBody(this.body);
-            this.mouseDown = null;
-            this.body = new _body.Body();
-            this.body.position = this.view.screenToWorld(position1);
-        }
-    }
-    onMouseMove(position2) {
-        this.mousePos = position2;
-        if (!this.mouseDown) this.body.position = this.view.screenToWorld(this.mousePos);
-        this.mouseMoved = true;
-    }
-}
-
-},{"../body":"4UTpg","./tool":"5kQCS","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"4UTpg":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-/**
- * Represents a body in the simulation.
- */ parcelHelpers.export(exports, "Body", ()=>Body
-);
-var _math = require("./math");
-var _color = require("./renderer/color");
-/** The density of bodies. */ const BODY_DENSITY = 200;
-class Body {
-    /**
-   * @param mass The body's initial mass.
-   * @param position The body's initial position.
-   * @param velocity The body's initial velocity.
-   * @param color The body's color.
-   */ constructor(){
-        this.mass = 1;
-        this.position = new _math.Vec2(0, 0);
-        this.velocity = new _math.Vec2(0, 0);
-        this.color = _color.Color.random().mul(0.8).add(new _color.Color(0.2, 0.2, 0.2));
-    }
-    /**
-   * Gets the body's position.
-   */ get position() {
-        return this._position;
-    }
-    /**
-   * Sets the body's position.
-   */ set position(position) {
-        this._position = new _math.Vec2(position.x, position.y);
-    }
-    /**
-   * Gets the body's velocity.
-   */ get velocity() {
-        return this._velocity;
-    }
-    /**
-   * Sets the body's velocity.
-   */ set velocity(velocity) {
-        this._velocity = new _math.Vec2(velocity.x, velocity.y);
-    }
-    /**
-   * Gets the body's mass.
-   */ get mass() {
-        return this._mass;
-    }
-    /**
-   * Sets the body's mass.
-   */ set mass(mass) {
-        this._mass = mass;
-        this._radius = 0.75 * Math.PI * this.mass ** (1 / 3) / BODY_DENSITY;
-    }
-    /**
-   * Gets the body's radius.
-   */ get radius() {
-        return this._radius;
-    }
-    /**
-   * Applies a force to the body.
-   * @param force The force to apply to the body.
-   * @param dt The time step.
-   */ applyForce(force, dt) {
-        this.applyImpulse(force.mul(dt));
-    }
-    /**
-   * Applies an impulse to the body.
-   * @param impulse The impulse to apply to the body.
-   */ applyImpulse(impulse) {
-        this.velocity = this.velocity.add(impulse.mul(1 / this.mass));
-    }
-    /**
-   * Updates the body's position.
-   * @param dt The time step.
-   */ update(dt1) {
-        this.position = this.position.add(this.velocity.mul(dt1));
-    }
-    // Implementation
-    intersects(other) {
-        if (other instanceof Body) {
-            // The square of the distance is used to avoid calculating the square root.
-            const sqrDistance = this.position.sub(other.position).sqrLength();
-            const sqrRadius = (this.radius + other.radius) ** 2;
-            return sqrDistance <= sqrRadius;
-        } else return this.position.sub(other).sqrLength() <= this.radius ** 2;
-    }
-    /**
-   * Merges this body with another.
-   * @param other The other body.
-   * @returns The new body.
-   */ merge(other1) {
-        let b = new Body();
-        b.mass = this.mass + other1.mass;
-        b.position = this.position.mul(this.mass).add(other1.position.mul(other1.mass)).div(b.mass);
-        b.velocity = this.velocity.mul(this.mass).add(other1.velocity.mul(other1.mass)).div(b.mass);
-        const colorA = this.color.mul(this.mass / b.mass);
-        const colorB = other1.color.mul(other1.mass / b.mass);
-        b.color = colorA.add(colorB);
-        return b;
-    }
-}
-
-},{"./math":"9zUrS","./renderer/color":"ak01f","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"9vhWm":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-/**
- * Tool for removing bodies to the world.
- */ parcelHelpers.export(exports, "BodyRemover", ()=>BodyRemover
-);
-var _tool = require("./tool");
-class BodyRemover extends _tool.Tool {
-    /**
-   * @param world The world to remove bodies from.
-   * @param view The view being used to render.
-   */ constructor(world, view){
-        super();
-        this.world = world;
-        this.view = view;
-    }
-    activate() {
-    // Do nothing.
-    }
-    draw() {
-    // Do nothing.
-    }
-    onMouseDown(_) {
-    // Do nothing.
-    }
-    onMouseUp(position) {
-        this.world.removeBody(this.view.screenToWorld(position));
-    }
-    onMouseMove(_1) {
-    // Do nothing.
-    }
-}
-
-},{"./tool":"5kQCS","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"c6DGr":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-/**
- * Tool for moving the camera.
- */ parcelHelpers.export(exports, "CameraMover", ()=>CameraMover
-);
-var _tool = require("./tool");
-/** Camera movement sensibility. */ const SENSIBILITY = 0.001;
-class CameraMover extends _tool.Tool {
-    /**
-   * @param view The view being used to render.
-   */ constructor(view){
-        super();
-        this.view = view;
-    }
-    activate() {
-        this.lastPosition = null;
-    }
-    draw() {
-    // Do nothing.
-    }
-    onMouseDown(position) {
-        this.lastPosition = position;
-    }
-    onMouseUp(_) {
-        this.lastPosition = null;
-    }
-    onMouseMove(position1) {
-        if (!this.lastPosition) return;
-        let delta = position1.sub(this.lastPosition);
-        delta.y *= -1;
-        this.lastPosition = position1;
-        this.view.move(delta.mul(SENSIBILITY));
-    }
-}
-
-},{"./tool":"5kQCS","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"eFpQJ":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "Slider", ()=>_slider.Slider
-);
-parcelHelpers.export(exports, "SliderType", ()=>_slider.SliderType
-);
-parcelHelpers.export(exports, "Button", ()=>_button.Button
-);
-parcelHelpers.export(exports, "Switch", ()=>_switch.Switch
-);
-parcelHelpers.export(exports, "Toggle", ()=>_toggle.Toggle
-);
-var _slider = require("./slider");
-var _button = require("./button");
-var _switch = require("./switch");
-var _toggle = require("./toggle");
-
-},{"./slider":"3OpYJ","./button":"b0yVv","./switch":"bkyAD","./toggle":"aOqPX","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"3OpYJ":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-/**
- * Class used to read slider values from the user.
- */ parcelHelpers.export(exports, "Slider", ()=>Slider
-);
-class Slider {
-    /**
-   * @param input Range input element.
-   * @param display Value display element.
-   * @param min The minimum value.
-   * @param max The maximum value.
-   * @param initial The initial value.
-   * @param type The slider type.
-   */ constructor(slider, min, max, initial, type){
-        this._root = slider;
-        this._input = this._root.querySelector('input');
-        this._display = this._root.querySelector('div');
-        this._type = type;
-        switch(this._type){
-            case 'integer':
-                this._input.min = min.toString();
-                this._input.max = max.toString();
-                this._input.value = initial.toString();
-                this._input.step = 1..toString();
-                break;
-            case 'linear':
-                this._input.min = min.toString();
-                this._input.max = max.toString();
-                this._input.value = initial.toString();
-                this._input.step = 0.1.toString();
-                break;
-            case 'exponential':
-                this._input.min = Math.log10(min).toString();
-                this._input.max = Math.log10(max).toString();
-                this._input.value = Math.log10(initial).toString();
-                this._input.step = 0.1.toString();
-                break;
-        }
-        this._input.addEventListener('input', this.updateDisplay.bind(this));
-        this.updateDisplay();
-    }
-    /**
-   * @returns The current value of the slider.
-   */ get value() {
-        switch(this._type){
-            case 'integer':
-            case 'linear':
-                return this._input.valueAsNumber;
-            case 'exponential':
-                return Math.pow(10, this._input.valueAsNumber);
-        }
-    }
-    /**
-   * Sets the value of the slider.
-   */ set value(value) {
-        switch(this._type){
-            case 'integer':
-            case 'linear':
-                this._input.valueAsNumber = value;
-                break;
-            case 'exponential':
-                this._input.valueAsNumber = Math.log10(value);
-                break;
-        }
-        this.updateDisplay();
-    }
-    /**
-   * Updates the display of the slider.
-   */ updateDisplay() {
-        if (this._type === 'integer') this._display.innerText = this.value.toString();
-        else if (this.value < 0.01 || this.value > 9999.99) this._display.innerText = this.value.toExponential(1);
-        else this._display.innerText = this.value.toFixed(2);
-    }
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"b0yVv":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-/**
- * Class used to handle button events.
- */ parcelHelpers.export(exports, "Button", ()=>Button
-);
-class Button {
-    /**
-   * @param element The button element.
-   */ constructor(element){
-        this.element = element;
-        this.onClickCallback = ()=>{
-        };
-        this.element.addEventListener('click', (_)=>this.onClickCallback()
-        );
-    }
-    /**
-   * Sets the button click callback.
-   */ setOnClick(callback) {
-        this.onClickCallback = callback;
-    }
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"bkyAD":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-/**
- * A switch made of many toggles, where only one can be active at a time.
- */ parcelHelpers.export(exports, "Switch", ()=>Switch
-);
-class Switch {
-    // Default constructor.
-    constructor(){
-        this.state = '';
-        this.toggles = [];
-        this.stateChangeCallback = (_)=>{
-        };
-    }
-    /**
-   * The current state of the switch.
-   */ get current() {
-        return this.state;
-    }
-    /**
-   * Sets the current state of the switch.
-   */ set current(name) {
-        if (this.state === name) return;
-        this.toggles.forEach((toggle)=>toggle[1].activated = toggle[0] === name
-        );
-        this.state = name;
-        this.stateChangeCallback(name);
-    }
-    /**
-   * Adds a toggle to the switch.
-   * @param name The name of the toggle.
-   * @param toggle The toggle to add.
-   */ add(name1, toggle) {
-        this.toggles.push([
-            name1,
-            toggle
-        ]);
-        toggle.setOnActivated(()=>this.onToggleActivated(name1)
-        );
-        toggle.setOnDeactivated(()=>this.onToggleDeactivated(name1)
-        );
-    }
-    /**
-   * Sets the callback called when the state changes.
-   * @param callback The callback to set.
-   */ setOnStateChange(callback) {
-        this.stateChangeCallback = callback;
-    }
-    /**
-   * Callback for when a toggle is activated.
-   * @param name The name of the toggle that was activated.
-   */ onToggleActivated(name2) {
-        this.current = name2;
-    }
-    /**
-   * Callback for when a toggle is deactivated.
-   * @param name The name of the toggle that was deactivated.
-   */ onToggleDeactivated(name3) {
-        if (this.state === name3) this.current = '';
-    }
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"aOqPX":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-/**
- * A button that toggles between two states.
- */ parcelHelpers.export(exports, "Toggle", ()=>Toggle
-);
-var _button = require("./button");
-class Toggle extends _button.Button {
-    /**
-   * @param element The button element.
-   */ constructor(element){
-        super(element);
-        this.state = false;
-        this.onActivatedCallback = ()=>{
-        };
-        this.onDeactivatedCallback = ()=>{
-        };
-        this.setOnClick(this.onClick.bind(this));
-    }
-    /**
-   * Is the toggle activated?
-   */ get activated() {
-        return this.state;
-    }
-    /**
-   * Set the toggle to activated or deactivated.
-   */ set activated(state) {
-        this.state = state;
-        this.element.classList.toggle('on', state);
-    }
-    /**
-   * Set the toggle activation callback.
-   * @param callback The callback to set.
-   */ setOnActivated(callback) {
-        this.onActivatedCallback = callback;
-    }
-    /**
-   * Set the toggle activation callback.
-   * @param callback The callback to set.
-   */ setOnDeactivated(callback1) {
-        this.onDeactivatedCallback = callback1;
-    }
-    /**
-   * Set the toggle activation callback.
-   */ onClick() {
-        this.activated = !this.activated;
-        if (this.activated) this.onActivatedCallback();
-        else this.onDeactivatedCallback();
-    }
-}
-
-},{"./button":"b0yVv","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"8br0T":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "GRAVITY_CONSTANT", ()=>GRAVITY_CONSTANT
-);
-/**
- * Represents a world of bodies.
- */ parcelHelpers.export(exports, "World", ()=>World
-);
-const GRAVITY_CONSTANT = 0.000001;
-class World {
-    // Default constructor.
-    constructor(){
-        this.bodies = [];
-    }
-    /**
-   * Adds a body to the world.
-   * @param body Body to add.
-   */ addBody(body) {
-        this.bodies.push(body);
-    }
-    /**
-   * Removes a body from the world.
-   * @param position The position of the body to remove.
-   */ removeBody(position) {
-        for(let i = 0; i < this.bodies.length; i++)if (this.bodies[i].intersects(position)) this.bodies.splice(i, 1);
-    }
-    /**
-   * Deletes all bodies in the world.
-   */ clear() {
-        this.bodies = [];
-    }
-    /**
-   * Updates the world.
-   * @param dt The time step.
-   */ update(dt) {
-        // Move bodies.
-        for(let i = 0; i < this.bodies.length; i++)this.bodies[i].update(dt);
-        // Apply gravity to all bodies.
-        for(let i1 = 0; i1 < this.bodies.length; i1++)for(let j = i1 + 1; j < this.bodies.length; j++){
-            const body1 = this.bodies[i1];
-            const body2 = this.bodies[j];
-            // Calculate the force of gravity between the two bodies.
-            const offset = body1.position.sub(body2.position);
-            const sqrDistance = offset.sqrLength();
-            const direction = offset.normalize();
-            const force = direction.mul(GRAVITY_CONSTANT * body1.mass * body2.mass / sqrDistance);
-            // Apply the force to the bodies.
-            this.bodies[j].applyForce(force, dt);
-            this.bodies[i1].applyForce(force.mul(-1), dt);
-        }
-        for(let i2 = 0; i2 < this.bodies.length; i2++){
-            for(let j = i2 + 1; j < this.bodies.length; j++)// Check for collision.
-            if (this.bodies[i2].intersects(this.bodies[j])) {
-                // Create a new body from the two bodies.
-                this.bodies[i2] = this.bodies[i2].merge(this.bodies[j]);
-                // Remove the second body.
-                this.bodies.splice(j, 1);
-            }
-        }
-    }
-    /**
-   * Draws the world.
-   * @param renderer Renderer used.
-   */ draw(renderer) {
-        for(let i = 0; i < this.bodies.length; i++)renderer.drawCircle(this.bodies[i].position, this.bodies[i].radius, this.bodies[i].color);
-    }
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"b365J":[function(require,module,exports) {
+},{}],"b365J":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "Preset", ()=>_preset.Preset
@@ -1780,7 +869,7 @@ var _empty = require("./empty");
 var _simpleStarSystem = require("./simple_star_system");
 var _customStarSystem = require("./custom_star_system");
 
-},{"./preset":"5QPQU","./selector":"7FAqz","./simple_star_system":"2ja4N","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV","./empty":"3m14K","./custom_star_system":"iz2ly"}],"5QPQU":[function(require,module,exports) {
+},{"./preset":"5QPQU","./selector":"7FAqz","./empty":"3m14K","./simple_star_system":"2ja4N","./custom_star_system":"iz2ly","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"5QPQU":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 /**
@@ -2017,7 +1106,240 @@ class Form {
     }
 }
 
-},{"./button":"b0yVv","./slider":"3OpYJ","./switch":"bkyAD","./toggle":"aOqPX","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"2ja4N":[function(require,module,exports) {
+},{"./button":"b0yVv","./slider":"3OpYJ","./switch":"bkyAD","./toggle":"aOqPX","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"b0yVv":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * Class used to handle button events.
+ */ parcelHelpers.export(exports, "Button", ()=>Button
+);
+class Button {
+    /**
+   * @param element The button element.
+   */ constructor(element){
+        this.element = element;
+        this.onClickCallback = ()=>{
+        };
+        this.element.addEventListener('click', (_)=>this.onClickCallback()
+        );
+    }
+    /**
+   * Sets the button click callback.
+   */ setOnClick(callback) {
+        this.onClickCallback = callback;
+    }
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"3OpYJ":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * Class used to read slider values from the user.
+ */ parcelHelpers.export(exports, "Slider", ()=>Slider
+);
+class Slider {
+    /**
+   * @param input Range input element.
+   * @param display Value display element.
+   * @param min The minimum value.
+   * @param max The maximum value.
+   * @param initial The initial value.
+   * @param type The slider type.
+   */ constructor(slider, min, max, initial, type){
+        this._root = slider;
+        this._input = this._root.querySelector('input');
+        this._display = this._root.querySelector('div');
+        this._type = type;
+        switch(this._type){
+            case 'integer':
+                this._input.min = min.toString();
+                this._input.max = max.toString();
+                this._input.value = initial.toString();
+                this._input.step = 1..toString();
+                break;
+            case 'linear':
+                this._input.min = min.toString();
+                this._input.max = max.toString();
+                this._input.value = initial.toString();
+                this._input.step = 0.1.toString();
+                break;
+            case 'exponential':
+                this._input.min = Math.log10(min).toString();
+                this._input.max = Math.log10(max).toString();
+                this._input.value = Math.log10(initial).toString();
+                this._input.step = 0.1.toString();
+                break;
+        }
+        this._input.addEventListener('input', this.updateDisplay.bind(this));
+        this.updateDisplay();
+    }
+    /**
+   * @returns The current value of the slider.
+   */ get value() {
+        switch(this._type){
+            case 'integer':
+            case 'linear':
+                return this._input.valueAsNumber;
+            case 'exponential':
+                return Math.pow(10, this._input.valueAsNumber);
+        }
+    }
+    /**
+   * Sets the value of the slider.
+   */ set value(value) {
+        switch(this._type){
+            case 'integer':
+            case 'linear':
+                this._input.valueAsNumber = value;
+                break;
+            case 'exponential':
+                this._input.valueAsNumber = Math.log10(value);
+                break;
+        }
+        this.updateDisplay();
+    }
+    /**
+   * Updates the display of the slider.
+   */ updateDisplay() {
+        if (this._type === 'integer') this._display.innerText = this.value.toString();
+        else if (this.value < 0.01 || this.value > 9999.99) this._display.innerText = this.value.toExponential(1);
+        else this._display.innerText = this.value.toFixed(2);
+    }
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"bkyAD":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * A switch made of many toggles, where only one can be active at a time.
+ */ parcelHelpers.export(exports, "Switch", ()=>Switch
+);
+class Switch {
+    // Default constructor.
+    constructor(){
+        this.state = '';
+        this.toggles = [];
+        this.stateChangeCallback = (_)=>{
+        };
+    }
+    /**
+   * The current state of the switch.
+   */ get current() {
+        return this.state;
+    }
+    /**
+   * Sets the current state of the switch.
+   */ set current(name) {
+        if (this.state === name) return;
+        this.toggles.forEach((toggle)=>toggle[1].activated = toggle[0] === name
+        );
+        this.state = name;
+        this.stateChangeCallback(name);
+    }
+    /**
+   * Adds a toggle to the switch.
+   * @param name The name of the toggle.
+   * @param toggle The toggle to add.
+   */ add(name1, toggle) {
+        this.toggles.push([
+            name1,
+            toggle
+        ]);
+        toggle.setOnActivated(()=>this.onToggleActivated(name1)
+        );
+        toggle.setOnDeactivated(()=>this.onToggleDeactivated(name1)
+        );
+    }
+    /**
+   * Sets the callback called when the state changes.
+   * @param callback The callback to set.
+   */ setOnStateChange(callback) {
+        this.stateChangeCallback = callback;
+    }
+    /**
+   * Callback for when a toggle is activated.
+   * @param name The name of the toggle that was activated.
+   */ onToggleActivated(name2) {
+        this.current = name2;
+    }
+    /**
+   * Callback for when a toggle is deactivated.
+   * @param name The name of the toggle that was deactivated.
+   */ onToggleDeactivated(name3) {
+        if (this.state === name3) this.current = '';
+    }
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"aOqPX":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * A button that toggles between two states.
+ */ parcelHelpers.export(exports, "Toggle", ()=>Toggle
+);
+var _button = require("./button");
+class Toggle extends _button.Button {
+    /**
+   * @param element The button element.
+   */ constructor(element){
+        super(element);
+        this.state = false;
+        this.onActivatedCallback = ()=>{
+        };
+        this.onDeactivatedCallback = ()=>{
+        };
+        this.setOnClick(this.onClick.bind(this));
+    }
+    /**
+   * Is the toggle activated?
+   */ get activated() {
+        return this.state;
+    }
+    /**
+   * Set the toggle to activated or deactivated.
+   */ set activated(state) {
+        this.state = state;
+        this.element.classList.toggle('on', state);
+    }
+    /**
+   * Set the toggle activation callback.
+   * @param callback The callback to set.
+   */ setOnActivated(callback) {
+        this.onActivatedCallback = callback;
+    }
+    /**
+   * Set the toggle activation callback.
+   * @param callback The callback to set.
+   */ setOnDeactivated(callback1) {
+        this.onDeactivatedCallback = callback1;
+    }
+    /**
+   * Set the toggle activation callback.
+   */ onClick() {
+        this.activated = !this.activated;
+        if (this.activated) this.onActivatedCallback();
+        else this.onDeactivatedCallback();
+    }
+}
+
+},{"./button":"b0yVv","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"3m14K":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * Generates an empty set.
+ */ parcelHelpers.export(exports, "Empty", ()=>Empty
+);
+var _preset = require("./preset");
+class Empty extends _preset.Preset {
+    constructor(){
+        super('empty');
+    }
+    generate(_) {
+    // Do nothing
+    }
+}
+
+},{"./preset":"5QPQU","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"2ja4N":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 /**
@@ -2050,24 +1372,244 @@ class SimpleStarSystem extends _preset.Preset {
     }
 }
 
-},{"./preset":"5QPQU","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV","../math":"9zUrS","../body":"4UTpg","../world":"8br0T"}],"3m14K":[function(require,module,exports) {
+},{"../body":"4UTpg","../math":"9zUrS","../world":"8br0T","./preset":"5QPQU","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"4UTpg":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 /**
- * Generates an empty set.
- */ parcelHelpers.export(exports, "Empty", ()=>Empty
+ * Represents a body in the simulation.
+ */ parcelHelpers.export(exports, "Body", ()=>Body
 );
-var _preset = require("./preset");
-class Empty extends _preset.Preset {
-    constructor(){
-        super('empty');
+var _math = require("./math");
+var _color = require("./renderer/color");
+/** The density of bodies. */ const BODY_DENSITY = 200;
+class Body {
+    /**
+   * @param mass The body's initial mass.
+   * @param position The body's initial position.
+   * @param velocity The body's initial velocity.
+   * @param color The body's color.
+   */ constructor(){
+        this.mass = 1;
+        this.position = new _math.Vec2(0, 0);
+        this.velocity = new _math.Vec2(0, 0);
+        this.color = _color.Color.random().mul(0.8).add(new _color.Color(0.2, 0.2, 0.2));
     }
-    generate(_) {
-    // Do nothing
+    /**
+   * Gets the body's position.
+   */ get position() {
+        return this._position;
+    }
+    /**
+   * Sets the body's position.
+   */ set position(position) {
+        this._position = new _math.Vec2(position.x, position.y);
+    }
+    /**
+   * Gets the body's velocity.
+   */ get velocity() {
+        return this._velocity;
+    }
+    /**
+   * Sets the body's velocity.
+   */ set velocity(velocity) {
+        this._velocity = new _math.Vec2(velocity.x, velocity.y);
+    }
+    /**
+   * Gets the body's mass.
+   */ get mass() {
+        return this._mass;
+    }
+    /**
+   * Sets the body's mass.
+   */ set mass(mass) {
+        this._mass = mass;
+        this._radius = 0.75 * Math.PI * this.mass ** (1 / 3) / BODY_DENSITY;
+    }
+    /**
+   * Gets the body's radius.
+   */ get radius() {
+        return this._radius;
+    }
+    /**
+   * Applies a force to the body.
+   * @param force The force to apply to the body.
+   * @param dt The time step.
+   */ applyForce(force, dt) {
+        this.applyImpulse(force.mul(dt));
+    }
+    /**
+   * Applies an impulse to the body.
+   * @param impulse The impulse to apply to the body.
+   */ applyImpulse(impulse) {
+        this.velocity = this.velocity.add(impulse.mul(1 / this.mass));
+    }
+    /**
+   * Updates the body's position.
+   * @param dt The time step.
+   */ update(dt1) {
+        this.position = this.position.add(this.velocity.mul(dt1));
+    }
+    // Implementation
+    intersects(other) {
+        if (other instanceof Body) {
+            // The square of the distance is used to avoid calculating the square root.
+            const sqrDistance = this.position.sub(other.position).sqrLength();
+            const sqrRadius = (this.radius + other.radius) ** 2;
+            return sqrDistance <= sqrRadius;
+        } else return this.position.sub(other).sqrLength() <= this.radius ** 2;
+    }
+    /**
+   * Merges this body with another.
+   * @param other The other body.
+   * @returns The new body.
+   */ merge(other1) {
+        let b = new Body();
+        b.mass = this.mass + other1.mass;
+        b.position = this.position.mul(this.mass).add(other1.position.mul(other1.mass)).div(b.mass);
+        b.velocity = this.velocity.mul(this.mass).add(other1.velocity.mul(other1.mass)).div(b.mass);
+        const colorA = this.color.mul(this.mass / b.mass);
+        const colorB = other1.color.mul(other1.mass / b.mass);
+        b.color = colorA.add(colorB);
+        return b;
     }
 }
 
-},{"./preset":"5QPQU","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"iz2ly":[function(require,module,exports) {
+},{"./math":"9zUrS","./renderer/color":"ak01f","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"ak01f":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * Describes a color.
+ */ parcelHelpers.export(exports, "Color", ()=>Color
+);
+class Color {
+    /**
+   * @param r The red component of the color.
+   * @param g The green component of the color.
+   * @param b The blue component of the color.
+   * @param a The alpha component of the color.
+   */ constructor(r, g, b, a = 1){
+        this.r = r;
+        this.g = g;
+        this.b = b;
+        this.a = a;
+    }
+    /**
+   * Adds the given color to this color, returning a new color.
+   * @param other The color to add.
+   * @returns The new color.
+   */ add(other) {
+        const r = Math.min(1, this.r + other.r);
+        const g = Math.min(1, this.g + other.g);
+        const b = Math.min(1, this.b + other.b);
+        const a = Math.min(1, this.a + other.a);
+        return new Color(r, g, b, a);
+    }
+    /**
+   * Mixes this color with the given color, returning a new color.
+   * @param other The color to mix with.
+   * @returns The new color.
+   */ mix(other1) {
+        const r = (this.r + other1.r) / 2;
+        const g = (this.g + other1.g) / 2;
+        const b = (this.b + other1.b) / 2;
+        const a = (this.a + other1.a) / 2;
+        return new Color(r, g, b, a);
+    }
+    /**
+   * Multiplies this color by a scalar, returning a new color.
+   * @param multiplier The scalar to multiply by.
+   * @returns The new color.
+   */ mul(multiplier) {
+        const r = Math.min(1, this.r * multiplier);
+        const g = Math.min(1, this.g * multiplier);
+        const b = Math.min(1, this.b * multiplier);
+        return new Color(r, g, b, this.a);
+    }
+    /**
+   * Divides this color by a scalar, returning a new color.
+   * @param divider The scalar to divide by.
+   * @returns The new color.
+   */ div(divider) {
+        return this.mul(1 / divider);
+    }
+    /**
+   * Generates a random color.
+   * @returns A random color.
+   */ static random() {
+        return new Color(Math.random(), Math.random(), Math.random());
+    }
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"8br0T":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "GRAVITY_CONSTANT", ()=>GRAVITY_CONSTANT
+);
+/**
+ * Represents a world of bodies.
+ */ parcelHelpers.export(exports, "World", ()=>World
+);
+const GRAVITY_CONSTANT = 0.000001;
+class World {
+    // Default constructor.
+    constructor(){
+        this.bodies = [];
+    }
+    /**
+   * Adds a body to the world.
+   * @param body Body to add.
+   */ addBody(body) {
+        this.bodies.push(body);
+    }
+    /**
+   * Removes a body from the world.
+   * @param position The position of the body to remove.
+   */ removeBody(position) {
+        for(let i = 0; i < this.bodies.length; i++)if (this.bodies[i].intersects(position)) this.bodies.splice(i, 1);
+    }
+    /**
+   * Deletes all bodies in the world.
+   */ clear() {
+        this.bodies = [];
+    }
+    /**
+   * Updates the world.
+   * @param dt The time step.
+   */ update(dt) {
+        // Move bodies.
+        for(let i = 0; i < this.bodies.length; i++)this.bodies[i].update(dt);
+        // Apply gravity to all bodies.
+        for(let i1 = 0; i1 < this.bodies.length; i1++)for(let j = i1 + 1; j < this.bodies.length; j++){
+            const body1 = this.bodies[i1];
+            const body2 = this.bodies[j];
+            // Calculate the force of gravity between the two bodies.
+            const offset = body1.position.sub(body2.position);
+            const sqrDistance = offset.sqrLength();
+            const direction = offset.normalize();
+            const force = direction.mul(GRAVITY_CONSTANT * body1.mass * body2.mass / sqrDistance);
+            // Apply the force to the bodies.
+            this.bodies[j].applyForce(force, dt);
+            this.bodies[i1].applyForce(force.mul(-1), dt);
+        }
+        for(let i2 = 0; i2 < this.bodies.length; i2++){
+            for(let j = i2 + 1; j < this.bodies.length; j++)// Check for collision.
+            if (this.bodies[i2].intersects(this.bodies[j])) {
+                // Create a new body from the two bodies.
+                this.bodies[i2] = this.bodies[i2].merge(this.bodies[j]);
+                // Remove the second body.
+                this.bodies.splice(j, 1);
+            }
+        }
+    }
+    /**
+   * Draws the world.
+   * @param renderer Renderer used.
+   */ draw(renderer) {
+        for(let i = 0; i < this.bodies.length; i++)renderer.drawCircle(this.bodies[i].position, this.bodies[i].radius, this.bodies[i].color);
+    }
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"iz2ly":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 /**
@@ -2124,6 +1666,464 @@ class CustomStarSystem extends _preset.Preset {
     }
 }
 
-},{"../body":"4UTpg","../math":"9zUrS","../ui/form":"lTd4l","../world":"8br0T","./preset":"5QPQU","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}]},["11zn2","jZgE0"], "jZgE0", "parcelRequire34d4")
+},{"../body":"4UTpg","../math":"9zUrS","../ui/form":"lTd4l","../world":"8br0T","./preset":"5QPQU","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"bK5TX":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "View", ()=>_view.View
+);
+/**
+ * Class used to render the app.
+ */ parcelHelpers.export(exports, "Renderer", ()=>Renderer
+);
+var _math = require("../math");
+var _color = require("./color");
+var _drawLine = require("./draw_line");
+var _drawCircle = require("./draw_circle");
+var _view = require("./view");
+/** Background color of the application. */ const BACKGROUND_COLOR = new _color.Color(0.05, 0.05, 0.05);
+/** Number of divisions used for drawing circles. */ const CIRCLE_DIVISIONS = 32;
+/** Line thickness scale. */ const LINE_THICKNESS_SCALE = 0.0025;
+/** Arrow head scale. */ const ARROW_HEAD_SCALE = 0.02;
+class Renderer {
+    /**
+   * @param canvas Canvas to use.
+   */ constructor(canvas){
+        this.commands = [];
+        // Get the WebGL context.
+        this.canvas = canvas;
+        this.context = this.canvas.getContext('webgl');
+        // Initialize shaders and vertex buffers.
+        this.initShaders();
+        this.initVertexBuffers();
+        // Initialize view.
+        this.view = new _view.View(this.canvas.width, this.canvas.height);
+    }
+    /**
+   * Draws a circle.
+   * @param center The center of the circle.
+   * @param radius The radius of the circle.
+   * @param color The color of the circle.
+   */ drawCircle(center, radius, color) {
+        this.commands.push(new _drawCircle.DrawCircle(center, radius, color));
+    }
+    /**
+   * Draws a line.
+   * @param start The start of the line.
+   * @param end The end of the line.
+   * @param thickness Thickness of the line.
+   * @param color The color of the line.
+   */ drawLine(start, end, thickness, color1) {
+        this.commands.push(new _drawLine.DrawLine(start, end, thickness, color1));
+    }
+    /**
+   * Draws an arrow.
+   * @param start The start of the arrow.
+   * @param end The end of the arrow.
+   * @param color The color of the arrow.
+   */ drawArrow(start1, end1, color2) {
+        const offset = end1.sub(start1);
+        const perpendicular = offset.perpendicular();
+        const diagonal1 = offset.add(perpendicular).normalize();
+        const diagonal2 = offset.sub(perpendicular).normalize();
+        this.drawLine(start1, end1, 1 / this.view.scale, color2);
+        this.drawLine(end1, end1.add(diagonal1.mul(-ARROW_HEAD_SCALE / this.view.scale)), 1 / this.view.scale, color2);
+        this.drawLine(end1, end1.add(diagonal2.mul(-ARROW_HEAD_SCALE / this.view.scale)), 1 / this.view.scale, color2);
+    }
+    /**
+   * Flushes the renderer, showing the current state of the app.
+   */ flush() {
+        // Clear the screen with the background color.
+        this.context.clearColor(BACKGROUND_COLOR.r, BACKGROUND_COLOR.g, BACKGROUND_COLOR.b, 1);
+        this.context.clear(this.context.COLOR_BUFFER_BIT);
+        // Execute all draw commands.
+        this.context.bindBuffer(this.context.ARRAY_BUFFER, this.vertexBuffer);
+        this.context.vertexAttribPointer(this.positionAttribute, 2, this.context.FLOAT, false, 0, 0);
+        this.context.enableVertexAttribArray(this.positionAttribute);
+        this.context.useProgram(this.program);
+        for (let command of this.commands){
+            if (command instanceof _drawCircle.DrawCircle) {
+                const translation = _math.Mat3.translation(command.center);
+                const scale = _math.Mat3.scale(new _math.Vec2(command.radius, command.radius));
+                const transform = scale.mul(translation).mul(this.view.getTransform());
+                this.context.uniformMatrix3fv(this.transformUniform, false, transform.elements);
+                this.context.uniform3f(this.colorUniform, command.color.r, command.color.g, command.color.b);
+                this.context.drawArrays(this.context.TRIANGLE_FAN, this.circle[0], this.circle[1]);
+            } else if (command instanceof _drawLine.DrawLine) {
+                const translation = _math.Mat3.translation(command.start);
+                const direction = command.end.sub(command.start);
+                const scale = _math.Mat3.scale(new _math.Vec2(command.thickness * LINE_THICKNESS_SCALE, direction.length()));
+                const rotation = _math.Mat3.rotation(Math.atan2(direction.y, direction.x) - Math.PI / 2);
+                const transform = scale.mul(rotation).mul(translation).mul(this.view.getTransform());
+                this.context.uniformMatrix3fv(this.transformUniform, false, transform.elements);
+                this.context.uniform3f(this.colorUniform, command.color.r, command.color.g, command.color.b);
+                this.context.drawArrays(this.context.TRIANGLE_FAN, this.line[0], this.line[1]);
+            }
+        }
+        this.commands = [];
+    }
+    /**
+   * Initializes shaders used for drawing.
+   */ initShaders() {
+        // Create vertex shader.
+        this.vertexShader = this.context.createShader(this.context.VERTEX_SHADER);
+        this.context.shaderSource(this.vertexShader, `
+      attribute vec2 position;
+
+      uniform mat3 transform;
+
+      void main() {
+        vec2 transformed = (transform * vec3(position, 1.0)).xy;
+        gl_Position = vec4(transformed, 0.0, 1.0);
+      }
+    `);
+        this.context.compileShader(this.vertexShader);
+        // Create fragment shader.
+        this.fragmentShader = this.context.createShader(this.context.FRAGMENT_SHADER);
+        this.context.shaderSource(this.fragmentShader, `
+      uniform mediump vec3 color;
+
+      void main() {
+        gl_FragColor = vec4(color, 1.0);
+      }
+    `);
+        this.context.compileShader(this.fragmentShader);
+        // Create shader program.
+        this.program = this.context.createProgram();
+        this.context.attachShader(this.program, this.vertexShader);
+        this.context.attachShader(this.program, this.fragmentShader);
+        this.context.linkProgram(this.program);
+        // Get shader program attribute locations.
+        this.positionAttribute = this.context.getAttribLocation(this.program, 'position');
+        // Get shader program uniform locations.
+        this.transformUniform = this.context.getUniformLocation(this.program, 'transform');
+        this.colorUniform = this.context.getUniformLocation(this.program, 'color');
+    }
+    /**
+   * Initializes vertex buffers used for drawing.
+   */ initVertexBuffers() {
+        // Generate circle vertices
+        this.circle = [
+            0,
+            CIRCLE_DIVISIONS + 2
+        ];
+        let vertices = [];
+        vertices.push(0, 0);
+        for(let i = 0; i <= CIRCLE_DIVISIONS; i++){
+            let angle = i / CIRCLE_DIVISIONS * Math.PI * 2;
+            vertices.push(Math.cos(angle), Math.sin(angle));
+        }
+        // Generate line vertices
+        this.line = [
+            vertices.length / 2,
+            4
+        ];
+        vertices.push(-1, 0);
+        vertices.push(-1, 1);
+        vertices.push(1, 1);
+        vertices.push(1, 0);
+        // Generate vertex buffer
+        this.vertexBuffer = this.context.createBuffer();
+        this.context.bindBuffer(this.context.ARRAY_BUFFER, this.vertexBuffer);
+        this.context.bufferData(this.context.ARRAY_BUFFER, new Float32Array(vertices), this.context.STATIC_DRAW);
+    }
+}
+
+},{"../math":"9zUrS","./color":"ak01f","./draw_line":"cQRBN","./draw_circle":"fpeFl","./view":"l5tb4","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"cQRBN":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * Represents a command used to draw an line on the screen.
+ */ parcelHelpers.export(exports, "DrawLine", ()=>DrawLine
+);
+class DrawLine {
+    /**
+   * @param start Start position of the line. 
+   * @param end End position of the line.
+   * @param thickness Thickness of the line.
+   * @param color Color of the line.
+   */ constructor(start, end, thickness, color){
+        this.start = start;
+        this.end = end;
+        this.thickness = thickness;
+        this.color = color;
+    }
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"fpeFl":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * Represents a command used to draw a circle.
+ */ parcelHelpers.export(exports, "DrawCircle", ()=>DrawCircle
+);
+class DrawCircle {
+    /**
+   * @param center Position of the circle center. 
+   * @param radius Radius of the circle.
+   * @param color Color of the circle.
+   */ constructor(center, radius, color){
+        this.center = center;
+        this.radius = radius;
+        this.color = color;
+    }
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"l5tb4":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * A view is a 2D camera that can be used to render a scene.
+ */ parcelHelpers.export(exports, "View", ()=>View
+);
+var _math = require("../math");
+class View {
+    // Default constructor
+    constructor(width, height){
+        this.aspectRatio = height / width;
+        this.width = width;
+        this.height = height;
+        this.onZoomChangeCallback = ()=>{
+        };
+        this.reset();
+    }
+    /**
+   * Gets the transform matrix.
+   * @returns The transform matrix.
+   */ getTransform() {
+        return this.transform;
+    }
+    /**
+   * Sets the view's position.
+   * @param position The new position.
+   */ setPosition(position) {
+        this.position = position;
+        this.updateTransform();
+    }
+    /**
+   * Sets the view's scale.
+   */ set scale(scale) {
+        this._scale = scale;
+        this.updateTransform();
+        this.onZoomChangeCallback();
+    }
+    /**
+   * Gets the view's scale.
+   */ get scale() {
+        return this._scale;
+    }
+    /**
+   * Resets this view.
+   */ reset() {
+        this.position = new _math.Vec2(0, 0);
+        this.scale = 0.5;
+    }
+    /**
+   * Moves the view by a given amount.
+   * @param delta The amount to move.
+   */ move(delta) {
+        this.setPosition(this.position.add(delta.div(this.scale)));
+    }
+    /**
+   * Zooms the view in.
+   * @param factor The zoom factor.
+   */ zoom(multiplier) {
+        this.scale /= multiplier;
+    }
+    /**
+   * Converts from screen coordinates to world coordinates.
+   * @param screen The screen coordinates.
+   * @return The world coordinates.
+   */ screenToWorld(screen) {
+        let normalized = new _math.Vec2(screen.x / this.width, screen.y / this.height);
+        normalized = normalized.sub(new _math.Vec2(0.5, 0.5)).mul(2);
+        normalized.y *= -1;
+        return this.transform.inverse().mul(normalized);
+    }
+    /**
+   * Sets the zoom change callback.
+   * @param callback The callback.
+   */ setOnZoomChange(callback) {
+        this.onZoomChangeCallback = callback;
+    }
+    /**
+   * Updates the transform matrix.
+   */ updateTransform() {
+        const translation = _math.Mat3.translation(new _math.Vec2(this.position.x, this.position.y));
+        const scale = _math.Mat3.scale(new _math.Vec2(this.scale * this.aspectRatio, this.scale));
+        this.transform = translation.mul(scale);
+    }
+}
+
+},{"../math":"9zUrS","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"acJ2D":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "Tool", ()=>_tool.Tool
+);
+parcelHelpers.export(exports, "BodyAdder", ()=>_bodyAdder.BodyAdder
+);
+parcelHelpers.export(exports, "BodyRemover", ()=>_bodyRemover.BodyRemover
+);
+parcelHelpers.export(exports, "CameraMover", ()=>_cameraMover.CameraMover
+);
+var _tool = require("./tool");
+var _bodyAdder = require("./body_adder");
+var _bodyRemover = require("./body_remover");
+var _cameraMover = require("./camera_mover");
+
+},{"./tool":"5kQCS","./body_adder":"3vvBg","./body_remover":"9vhWm","./camera_mover":"c6DGr","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"5kQCS":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * Generic tool class.
+ */ parcelHelpers.export(exports, "Tool", ()=>Tool
+);
+class Tool {
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"3vvBg":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * Tool for adding bodies to the world.
+ */ parcelHelpers.export(exports, "BodyAdder", ()=>BodyAdder
+);
+var _body = require("../body");
+var _tool = require("./tool");
+/** Velocity multiplier for throwing bodies. */ const VELOCITY_MULTIPLIER = 0.0004;
+class BodyAdder extends _tool.Tool {
+    /**
+   * @param world The world to add bodies to.
+   * @param view The view being used to render.
+   * @param mass The slider which indicates the body's mass.
+   */ constructor(world, view, mass){
+        super();
+        this.world = world;
+        this.view = view;
+        this.mass = mass;
+    }
+    activate() {
+        this.body = new _body.Body();
+        this.mouseDown = null;
+        this.mouseMoved = false;
+    }
+    draw(renderer) {
+        if (!this.mouseMoved) return;
+        this.body.mass = this.mass.value;
+        renderer.drawCircle(this.body.position, this.body.radius, this.body.color);
+        if (this.mouseDown) renderer.drawArrow(this.body.position, this.view.screenToWorld(this.mousePos), this.body.color);
+    }
+    onMouseDown(position) {
+        this.body.position = this.view.screenToWorld(position);
+        this.mouseDown = position;
+    }
+    onMouseUp(position1) {
+        if (this.mouseDown) {
+            let delta = position1.sub(this.mouseDown);
+            delta.y *= -1;
+            this.body.position = this.view.screenToWorld(this.mouseDown);
+            this.body.velocity = delta.mul(VELOCITY_MULTIPLIER / this.view.scale);
+            this.world.addBody(this.body);
+            this.mouseDown = null;
+            this.body = new _body.Body();
+            this.body.position = this.view.screenToWorld(position1);
+        }
+    }
+    onMouseMove(position2) {
+        this.mousePos = position2;
+        if (!this.mouseDown) this.body.position = this.view.screenToWorld(this.mousePos);
+        this.mouseMoved = true;
+    }
+}
+
+},{"../body":"4UTpg","./tool":"5kQCS","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"9vhWm":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * Tool for removing bodies to the world.
+ */ parcelHelpers.export(exports, "BodyRemover", ()=>BodyRemover
+);
+var _tool = require("./tool");
+class BodyRemover extends _tool.Tool {
+    /**
+   * @param world The world to remove bodies from.
+   * @param view The view being used to render.
+   */ constructor(world, view){
+        super();
+        this.world = world;
+        this.view = view;
+    }
+    activate() {
+    // Do nothing.
+    }
+    draw() {
+    // Do nothing.
+    }
+    onMouseDown(_) {
+    // Do nothing.
+    }
+    onMouseUp(position) {
+        this.world.removeBody(this.view.screenToWorld(position));
+    }
+    onMouseMove(_1) {
+    // Do nothing.
+    }
+}
+
+},{"./tool":"5kQCS","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"c6DGr":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * Tool for moving the camera.
+ */ parcelHelpers.export(exports, "CameraMover", ()=>CameraMover
+);
+var _tool = require("./tool");
+/** Camera movement sensibility. */ const SENSIBILITY = 0.001;
+class CameraMover extends _tool.Tool {
+    /**
+   * @param view The view being used to render.
+   */ constructor(view){
+        super();
+        this.view = view;
+    }
+    activate() {
+        this.lastPosition = null;
+    }
+    draw() {
+    // Do nothing.
+    }
+    onMouseDown(position) {
+        this.lastPosition = position;
+    }
+    onMouseUp(_) {
+        this.lastPosition = null;
+    }
+    onMouseMove(position1) {
+        if (!this.lastPosition) return;
+        let delta = position1.sub(this.lastPosition);
+        delta.y *= -1;
+        this.lastPosition = position1;
+        this.view.move(delta.mul(SENSIBILITY));
+    }
+}
+
+},{"./tool":"5kQCS","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"eFpQJ":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "Slider", ()=>_slider.Slider
+);
+parcelHelpers.export(exports, "SliderType", ()=>_slider.SliderType
+);
+parcelHelpers.export(exports, "Button", ()=>_button.Button
+);
+parcelHelpers.export(exports, "Switch", ()=>_switch.Switch
+);
+parcelHelpers.export(exports, "Toggle", ()=>_toggle.Toggle
+);
+var _slider = require("./slider");
+var _button = require("./button");
+var _switch = require("./switch");
+var _toggle = require("./toggle");
+
+},{"./slider":"3OpYJ","./button":"b0yVv","./switch":"bkyAD","./toggle":"aOqPX","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}]},["11zn2","jZgE0"], "jZgE0", "parcelRequire34d4")
 
 //# sourceMappingURL=index.e7f05703.js.map
