@@ -11,7 +11,7 @@
   ],
   "scripts": {
     "start": "parcel serve src/index.html",
-    "build": "cross-env NODE_ENV=production parcel build src/index.html --public-url '.'",
+    "build": "cross-env NODE_ENV=production parcel build src/index.html --public-url './'",
     "deploy": "gh-pages -d dist"
   },
   "author": "Ricardo Antunes",
