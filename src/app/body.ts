@@ -29,7 +29,7 @@ export class Body {
     this.mass = 1.0;
     this.position = new Vec2(0.0, 0.0);
     this.velocity = new Vec2(0.0, 0.0);
-    this.color = Color.random();
+    this.color = Color.random().mul(0.8).add(new Color(0.2, 0.2, 0.2));
   }
 
   /**
