@@ -33,7 +33,6 @@ export class Slider {
     this._display = this._root.querySelector('div') as HTMLDivElement;
     this._type = type;
 
-
     switch (this._type) {
       case 'integer':
         this._input.min = min.toString();
