@@ -5,13 +5,16 @@ import {Mat3, Vec2,} from '../math';
  */
 export class View {
   /** Transform matrix to apply while rendering. */
-  private transform: Mat3;
+  private _transform: Mat3;
 
   /** View position. */
-  private position: Vec2;
+  private _position: Vec2;
 
   /** View scale. */
   private _scale: number;
+
+  /** Is the view locked? */
+  private _locked: boolean;
 
   /** Aspect ratio. */
   private aspectRatio: number;
@@ -22,6 +25,9 @@ export class View {
   /** Canvas height. */
   private height: number;
 
+  /** View change callback. */
+  private onViewChangeCallback: () => void;
+
   /** Zoom change callback. */
   private onZoomChangeCallback: () => void;
 
@@ -30,33 +36,43 @@ export class View {
     this.aspectRatio = height / width;
     this.width = width;
     this.height = height;
+    this.onViewChangeCallback = () => {};
     this.onZoomChangeCallback = () => {};
     this.reset();
   }
 
   /**
    * Gets the transform matrix.
-   * @returns The transform matrix.
    */
-  public getTransform(): Mat3 {
-    return this.transform;
+  public get transform(): Mat3 {
+    return this._transform;
   }
 
   /**
    * Sets the view's position.
-   * @param position The new position.
    */
-  public setPosition(position: Vec2): void {
-    this.position = position;
+  public set position(position: Vec2) {
+    if (this._locked) return;
+    this._position = position;
     this.updateTransform();
+    this.onViewChangeCallback();
+  }
+
+  /**
+   * Gets the view's position.
+   */
+  public get position(): Vec2 {
+    return this._position.clone();
   }
 
   /**
    * Sets the view's scale.
    */
   public set scale(scale: number) {
+    if (this._locked) return;
     this._scale = scale;
     this.updateTransform();
+    this.onViewChangeCallback();
     this.onZoomChangeCallback();
   }
 
@@ -71,6 +87,7 @@ export class View {
    * Resets this view.
    */
   public reset(): void {
+    this.unlock();
     this.position = new Vec2(0.0, 0.0);
     this.scale = 0.5;
   }
@@ -80,7 +97,7 @@ export class View {
    * @param delta The amount to move.
    */
   public move(delta: Vec2): void {
-    this.setPosition(this.position.add(delta.div(this.scale)));
+    this.position = this.position.add(delta.div(this.scale));
   }
 
   /**
@@ -104,6 +121,14 @@ export class View {
   }
 
   /**
+   * Sets the view change callback.
+   * @param callback The callback.
+   */
+  public setOnViewChange(callback: () => void): void {
+    this.onViewChangeCallback = callback;
+  }
+
+  /**
    * Sets the zoom change callback.
    * @param callback The callback.
    */
@@ -112,11 +137,25 @@ export class View {
   }
 
   /**
+   * Locks the view.
+   */
+  public lock(): void {
+    this._locked = true;
+  }
+
+  /**
+   * Unlocks the view.
+   */
+  public unlock(): void {
+    this._locked = false;
+  }
+
+  /**
    * Updates the transform matrix.
    */
   private updateTransform(): void {
     const translation = Mat3.translation(new Vec2(this.position.x, this.position.y));
     const scale = Mat3.scale(new Vec2(this.scale * this.aspectRatio, this.scale));
-    this.transform = translation.mul(scale);
+    this._transform = translation.mul(scale);
   }
 }
