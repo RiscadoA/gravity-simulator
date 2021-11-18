@@ -30,7 +30,6 @@ export class Form {
   constructor(root: HTMLElement) {
     this._fields = new Map<string, FormField>();
     this._root = root;
-    console.log(this._root);
     this._cancel = new Button(this._root.querySelector('#cancel') as HTMLButtonElement);
     this._submit = new Button(this._root.querySelector('#submit') as HTMLButtonElement);
   }
