@@ -51,6 +51,9 @@ export class App {
   /** Body remover toggle. */
   private bodyRemoverToggle: UI.Toggle;
 
+  /** Body mover toggle. */
+  private bodyMoverToggle: UI.Toggle;
+
   /** Camera mover toggle. */
   private cameraMoverToggle: UI.Toggle;
 
@@ -121,12 +124,14 @@ export class App {
     // Initialize UI toggles
     this.bodyAdderToggle = new UI.Toggle(document.getElementById('bodyAdderToggle') as HTMLButtonElement);
     this.bodyRemoverToggle = new UI.Toggle(document.getElementById('bodyRemoverToggle') as HTMLButtonElement);
+    this.bodyMoverToggle = new UI.Toggle(document.getElementById('bodyMoverToggle') as HTMLButtonElement);
     this.cameraMoverToggle = new UI.Toggle(document.getElementById('cameraMoverToggle') as HTMLButtonElement);
 
     // Initialize tools
     this.tools = new Map<string, Tools.Tool>();
     this.tools.set('bodyAdder', new Tools.BodyAdder(this.world, this.renderer.view, this.bodyMass));
     this.tools.set('bodyRemover', new Tools.BodyRemover(this.world, this.renderer.view));
+    this.tools.set('bodyMover', new Tools.BodyMover(this.world, this.renderer.view));
     this.tools.set('cameraMover', new Tools.CameraMover(this.renderer.view));
     this.tool = undefined;
 
@@ -134,6 +139,7 @@ export class App {
     this.toolSwitch = new UI.Switch();
     this.toolSwitch.add('bodyAdder', this.bodyAdderToggle);
     this.toolSwitch.add('bodyRemover', this.bodyRemoverToggle);
+    this.toolSwitch.add('bodyMover', this.bodyMoverToggle);
     this.toolSwitch.add('cameraMover', this.cameraMoverToggle);
     this.toolSwitch.setOnStateChange(tool => {
       this.tool = this.tools.get(tool);

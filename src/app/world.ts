@@ -27,11 +27,22 @@ export class World {
 
   /**
    * Removes a body from the world.
-   * @param position The position of the body to remove.
+   * @param body The body to remove.
    */
-  public removeBody(position: Vec2): void {
-    for (let i = 0; i < this.bodies.length; i++)
-      if (this.bodies[i].intersects(position)) this.bodies.splice(i, 1);
+  public removeBody(body: Body): void {
+    this.bodies.splice(this.bodies.indexOf(body), 1);
+  }
+
+  /**
+   * Picks a body in the world.
+   * @param position The position to pick.
+   * @return The body at the position, or null if no body is at the position.
+   */
+  public pickBody(position: Vec2): Body|null {
+    for (let i = 0; i < this.bodies.length; i++) {
+      if (this.bodies[i].intersects(position)) return this.bodies[i];
+    }
+    return null;
   }
 
   /**

@@ -37,7 +37,8 @@ export class BodyRemover extends Tool {
   }
 
   public override onMouseUp(position: Vec2): void {
-    this.world.removeBody(this.view.screenToWorld(position));
+    const body = this.world.pickBody(this.view.screenToWorld(position));
+    if (body) this.world.removeBody(body);
   }
 
   public override onMouseMove(_: Vec2): void {

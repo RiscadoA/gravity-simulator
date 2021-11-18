@@ -18,6 +18,10 @@ export class Body {
   private _velocity: Vec2;
   /** Body's color. */
   public color: Color;
+  /** Is the body static? */
+  public static: boolean;
+  /** Merge callback. */
+  private onMergeCallback: (body: Body) => void;
 
   /**
    * @param mass The body's initial mass.
@@ -30,6 +34,7 @@ export class Body {
     this.position = new Vec2(0.0, 0.0);
     this.velocity = new Vec2(0.0, 0.0);
     this.color = Color.random().mul(0.8).add(new Color(0.2, 0.2, 0.2));
+    this.onMergeCallback = (_) => {};
   }
 
   /**
@@ -49,7 +54,7 @@ export class Body {
   /**
    * Gets the body's velocity.
    */
-   public get velocity(): Vec2 {
+  public get velocity(): Vec2 {
     return this._velocity;
   }
 
@@ -59,7 +64,7 @@ export class Body {
   public set velocity(velocity: Vec2) {
     this._velocity = new Vec2(velocity.x, velocity.y);
   }
-  
+
   /**
    * Gets the body's mass.
    */
@@ -104,7 +109,7 @@ export class Body {
    * @param dt The time step.
    */
   public update(dt: number): void {
-    this.position = this.position.add(this.velocity.mul(dt));
+    if (!this.static) this.position = this.position.add(this.velocity.mul(dt));
   }
 
   /**
@@ -134,6 +139,14 @@ export class Body {
   }
 
   /**
+   * Sets the merge callback.
+   * @param callback The callback.
+   */
+  public setOnMerge(callback: (body: Body) => void): void {
+    this.onMergeCallback = callback;
+  }
+
+  /**
    * Merges this body with another.
    * @param other The other body.
    * @returns The new body.
@@ -149,6 +162,8 @@ export class Body {
     const colorB = other.color.mul(other.mass / b.mass);
     b.color = colorA.add(colorB);
 
+    other.onMergeCallback(b);
+    this.onMergeCallback(b);
     return b;
   }
 }
