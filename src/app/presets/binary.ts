@@ -1,6 +1,5 @@
 import {Body} from '../body';
 import {Vec2} from '../math';
-import {Form} from '../ui/form';
 import {GRAVITY_CONSTANT, World} from '../world';
 
 import {Preset} from './preset';
@@ -8,29 +7,20 @@ import {Preset} from './preset';
 /**
  * Generates a binary star system.
  */
-export class CustomBinary extends Preset {
+export class Binary extends Preset {
   constructor() {
-    // Create form
-    const form = Form.create('customBinary');
-    form.addSlider('starsMass', 0.1, 100000000.0, 1000.0, 'exponential');
-    form.addSlider('starsDistance', 0.1, 100.0, 0.15, 'exponential');
-    form.addSlider('bodyCount', 1, 2000, 100, 'integer');
-    form.addSlider('bodyMass', 0.1, 100000.0, 1.0, 'exponential');
-    form.addSlider('bodyMassSpread', 0.0, 1.0, 1.0, 'linear');
-    form.addSlider('bodyDistance', 0.1, 25.0, 4.0, 'linear');
-    form.addSlider('bodyDistanceSpread', 0.0, 1.0, 0.8, 'linear');
-    super('customBinary', form);
+    super('binary');
   }
 
   public override generate(world: World): void {
     // Get settings from form
-    const starsMass = this.form!.getValue('starsMass');
-    const starsDistance = this.form!.getValue('starsDistance');
-    const bodyCount = this.form!.getValue('bodyCount');
-    const bodyMass = this.form!.getValue('bodyMass');
-    const bodyMassSpread = this.form!.getValue('bodyMassSpread');
-    const bodyDistance = this.form!.getValue('bodyDistance');
-    const bodyDistanceSpread = this.form!.getValue('bodyDistanceSpread');
+    const starsMass = 1000.0;
+    const starsDistance = 0.15;
+    const bodyCount = 100;
+    const bodyMass = 1.0;
+    const bodyMassSpread = 1.0;
+    const bodyDistance = 4.0;
+    const bodyDistanceSpread = 0.8;
 
     const bodyMinMass = Math.max(0.01, bodyMass * (1.0 - bodyMassSpread));
     const bodyMaxMass = bodyMass * (1.0 + bodyMassSpread);

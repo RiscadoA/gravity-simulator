@@ -421,8 +421,9 @@ export class Renderer {
    */
   private executeCommand(command: Command): void {
     if (command instanceof DrawCircle) {
+      const radius = Math.max(command.radius, TRAIL_MIN_THICKNESS / this.view.scale);
       const translation = Mat3.translation(command.center);
-      const scale = Mat3.scale(new Vec2(command.radius, command.radius));
+      const scale = Mat3.scale(new Vec2(radius, radius));
       const transform = scale.mul(translation).mul(this.view.transform);
 
       this.context.uniformMatrix3fv(this.drawTransformUniform, false, transform.elements);

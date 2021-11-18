@@ -188,6 +188,7 @@ export class App {
     this.presetSelector.add(new Presets.Empty());
     this.presetSelector.add(new Presets.Planets());
     this.presetSelector.add(new Presets.Moons());
+    this.presetSelector.add(new Presets.Binary());
     this.presetSelector.add(new Presets.CustomSimple());
     this.presetSelector.add(new Presets.CustomBinary());
     this.presetSelector.finish('planets');
