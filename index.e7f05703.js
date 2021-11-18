@@ -2670,12 +2670,17 @@ class BodyFollower extends _tool.Tool {
         this.world = world;
         this.view = view;
         this.body = null;
+        this.lastBody = null;
         this.callback = this.setBody.bind(this);
     }
     activate() {
         this.body = null;
     }
     draw() {
+        if (this.body !== this.lastBody) {
+            this.view.triggerViewChange();
+            this.lastBody = this.body;
+        }
         if (this.body) {
             if (this.body.destroyed) this.setBody(null);
             else this.view.position = this.body.position.mul(-1);
@@ -2694,7 +2699,6 @@ class BodyFollower extends _tool.Tool {
         if (this.body) this.body.removeOnMerge(this.callback);
         this.body = body;
         if (this.body) this.body.addOnMerge(this.callback);
-        this.view.triggerViewChange();
     }
 }
 
