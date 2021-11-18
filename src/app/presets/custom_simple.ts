@@ -8,29 +8,32 @@ import {Preset} from './preset';
 /**
  * Generates a custom system with a single star.
  */
-export class CustomStarSystem extends Preset {
+export class CustomSimple extends Preset {
   constructor() {
     // Create form
-    const form = Form.create('customStarSystem');
+    const form = Form.create('customSimple');
     form.addSlider('starMass', 0.1, 100000000.0, 1000.0, 'exponential');
-    form.addSlider('bodyCount', 1, 1000, 100, 'integer');
-    form.addSlider('bodyMinMass', 0.1, 100000.0, 1.0, 'exponential');
-    form.addSlider('bodyMaxMass', 0.1, 100000.0, 1.0, 'exponential');
-    form.addSlider('bodyMinDistance', 0.1, 25.0, 1.0, 'linear');
-    form.addSlider('bodyMaxDistance', 0.1, 25.0, 5.0, 'linear');
-    super('customStarSystem', form);
+    form.addSlider('bodyCount', 1, 2000, 100, 'integer');
+    form.addSlider('bodyMass', 0.1, 100000.0, 1.0, 'exponential');
+    form.addSlider('bodyMassSpread', 0.0, 1.0, 0.5, 'linear');
+    form.addSlider('bodyDistance', 0.1, 25.0, 1.0, 'linear');
+    form.addSlider('bodyDistanceSpread', 0.0, 1.0, 0.5, 'linear');
+    super('customSimple', form);
   }
 
   public override generate(world: World): void {
     // Get settings from form
     const starMass = this.form!.getValue('starMass');
     const bodyCount = this.form!.getValue('bodyCount');
-    let bodyMinMass = this.form!.getValue('bodyMinMass');
-    let bodyMaxMass = this.form!.getValue('bodyMaxMass');
-    let bodyMinDistance = this.form!.getValue('bodyMinDistance');
-    let bodyMaxDistance = this.form!.getValue('bodyMaxDistance');
-    if (bodyMaxMass < bodyMinMass) [bodyMaxMass, bodyMinMass] = [bodyMinMass, bodyMaxMass];
-    if (bodyMaxDistance < bodyMinDistance) [bodyMaxDistance, bodyMinDistance] = [bodyMinDistance, bodyMaxDistance];
+    const bodyMass = this.form!.getValue('bodyMass');
+    const bodyMassSpread = this.form!.getValue('bodyMassSpread');
+    const bodyDistance = this.form!.getValue('bodyDistance');
+    const bodyDistanceSpread = this.form!.getValue('bodyDistanceSpread');
+    
+    const bodyMinMass = Math.max(0.01, bodyMass * (1.0 - bodyMassSpread));
+    const bodyMaxMass = bodyMass * (1.0 + bodyMassSpread);
+    const bodyMinDistance = bodyDistance * (1.0 - bodyDistanceSpread);
+    const bodyMaxDistance = bodyDistance * (1.0 + bodyDistanceSpread);
 
     // Add star
     const star = new Body();

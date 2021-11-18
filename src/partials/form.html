@@ -4,21 +4,36 @@
     <hr>
     <div class="switch">
       <button id="empty">Empty</button>
-      <button id="simpleStarSystem">Simple star system</button>
-      <button id="customStarSystem">Custom star system</button>
+      <button id="planets">Planets</button>
+      <button id="moons">Moons</button>
+      <button id="customSimple">Custom simple</button>
+      <button id="customBinary">Custom binary</button>
     </div>
     <button id="cancel">Cancel</button>
     <button id="submit">Okay</button>
   </div>
-  <div id="customStarSystem" class="hidden">
-    <h1>Custom star system</h1>
+  <div id="customSimple" class="hidden">
+    <h1>Custom simple system</h1>
     <hr>
-    <include src="src/partials/slider.html" locals='{"id": "starMass", "text": "Star Mass"}'></include>
-    <include src="src/partials/slider.html" locals='{"id": "bodyCount", "text": "Body Count"}'></include>
-    <include src="src/partials/slider.html" locals='{"id": "bodyMinMass", "text": "Smallest Mass"}'></include>
-    <include src="src/partials/slider.html" locals='{"id": "bodyMaxMass", "text": "Largest Mass"}'></include>
-    <include src="src/partials/slider.html" locals='{"id": "bodyMinDistance", "text": "Closest Distance"}'></include>
-    <include src="src/partials/slider.html" locals='{"id": "bodyMaxDistance", "text": "Farthest Distance"}'></include>
+    <include src="src/partials/slider.html" locals='{"id": "starMass", "text": "Star mass"}'></include>
+    <include src="src/partials/slider.html" locals='{"id": "bodyCount", "text": "Body count"}'></include>
+    <include src="src/partials/slider.html" locals='{"id": "bodyMass", "text": "Bodies mass"}'></include>
+    <include src="src/partials/slider.html" locals='{"id": "bodyMassSpread", "text": "Bodies mass spread"}'></include>
+    <include src="src/partials/slider.html" locals='{"id": "bodyDistance", "text": "Bodies distance"}'></include>
+    <include src="src/partials/slider.html" locals='{"id": "bodyDistanceSpread", "text": "Bodies distance spread"}'></include>
+    <button id="cancel">Cancel</button>
+    <button id="submit">Okay</button>
+  </div>
+  <div id="customBinary" class="hidden">
+    <h1>Custom binary system</h1>
+    <hr>
+    <include src="src/partials/slider.html" locals='{"id": "starsMass", "text": "Stars mass"}'></include>
+    <include src="src/partials/slider.html" locals='{"id": "starsDistance", "text": "Stars distance"}'></include>
+    <include src="src/partials/slider.html" locals='{"id": "bodyCount", "text": "Body count"}'></include>
+    <include src="src/partials/slider.html" locals='{"id": "bodyMass", "text": "Bodies mass"}'></include>
+    <include src="src/partials/slider.html" locals='{"id": "bodyMassSpread", "text": "Bodies mass spread"}'></include>
+    <include src="src/partials/slider.html" locals='{"id": "bodyDistance", "text": "Bodies distance"}'></include>
+    <include src="src/partials/slider.html" locals='{"id": "bodyDistanceSpread", "text": "Bodies distance spread"}'></include>
     <button id="cancel">Cancel</button>
     <button id="submit">Okay</button>
   </div>

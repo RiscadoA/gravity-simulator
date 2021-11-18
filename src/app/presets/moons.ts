@@ -5,11 +5,11 @@ import {World, GRAVITY_CONSTANT} from '../world';
 import {Preset} from './preset';
 
 /**
- * Generates a simple system with a single star.
+ * Generates a star system with planets and moons.
  */
-export class SimpleStarSystem extends Preset {
+export class Moons extends Preset {
   constructor() {
-    super('simpleStarSystem');
+    super('moons');
   }
 
   public override generate(world: World): void {

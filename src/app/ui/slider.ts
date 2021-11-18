@@ -94,7 +94,7 @@ export class Slider {
   private updateDisplay(): void {
     if (this._type === 'integer') {
       this._display.innerText = this.value.toString();
-    } else if (this.value < 0.01 || this.value > 9999.99)
+    } else if (this.value < 0.01 && this.value != 0.0 || this.value > 9999.99)
       this._display.innerText = this.value.toExponential(1);
     else
       this._display.innerText = this.value.toFixed(2);

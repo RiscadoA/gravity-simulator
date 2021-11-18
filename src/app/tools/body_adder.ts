@@ -56,7 +56,7 @@ export class BodyAdder extends Tool {
     if (!this.mouseMoved) return;
 
     this.body.mass = this.mass.value;
-    renderer.drawCircle(this.body.position, this.body.radius, this.body.color);
+    renderer.drawCircle(this.body.position, this.body.radius, this.body.color, false);
     if (this.mouseDown) renderer.drawArrow(this.body.position, this.view.screenToWorld(this.mousePos), this.body.color);
   }
 

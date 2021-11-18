@@ -6,7 +6,7 @@ import * as UI from './ui';
 import {World} from './world';
 
 /** Multiplier of the time step passed to the update functions. */
-const TIME_SCALE = 0.000005;
+const TIME_SCALE = 0.000002;
 
 /** Help page URL. */
 const HELP_URL = 'https://riscadoa.com/portfolio/gravity-simulator/';
@@ -35,6 +35,9 @@ export class App {
 
   /** Settings button. */
   private settingsButton: UI.Button;
+
+  /** Trails toggle. */
+  private trailsToggle: UI.Toggle;
 
   /** Zoom in button. */
   private zoomInButton: UI.Button;
@@ -111,7 +114,7 @@ export class App {
         new UI.Slider(document.getElementById('bodyMass') as HTMLDivElement, 0.1, 100000000.0, 1.0, 'exponential');
     this.bodyMass.value = 1.0;
     this.simulationSpeed =
-        new UI.Slider(document.getElementById('simulationSpeed') as HTMLDivElement, 0.01, 100.0, 1.0, 'exponential');
+        new UI.Slider(document.getElementById('simulationSpeed') as HTMLDivElement, 0.001, 100.0, 1.0, 'exponential');
     this.simulationSpeed.value = 1.0;
 
     // Initialize UI buttons
@@ -122,6 +125,7 @@ export class App {
     this.helpButton = new UI.Button(document.getElementById('helpButton') as HTMLButtonElement);
 
     // Initialize UI toggles
+    this.trailsToggle = new UI.Toggle(document.getElementById('trailsToggle') as HTMLButtonElement);
     this.bodyAdderToggle = new UI.Toggle(document.getElementById('bodyAdderToggle') as HTMLButtonElement);
     this.bodyRemoverToggle = new UI.Toggle(document.getElementById('bodyRemoverToggle') as HTMLButtonElement);
     this.bodyMoverToggle = new UI.Toggle(document.getElementById('bodyMoverToggle') as HTMLButtonElement);
@@ -144,6 +148,26 @@ export class App {
     this.toolSwitch.setOnStateChange(tool => {
       this.tool = this.tools.get(tool);
       if (this.tool) this.tool.activate();
+      if (tool == 'cameraMover') {
+        this.renderer.view.unlock();
+        this.renderer.trailsEnabled = false;
+        this.trailsToggle.activated = false;
+      }
+    });
+
+    // Trails callbacks
+    this.trailsToggle.setOnActivated(() => {
+      this.renderer.view.lock();
+      this.renderer.trailsEnabled = true;
+      if (this.toolSwitch.current == 'cameraMover') this.toolSwitch.current = '';
+    });
+    this.trailsToggle.setOnDeactivated(() => {
+      this.renderer.trailsEnabled = false;
+      this.renderer.view.unlock();
+    });
+    this.renderer.view.setOnViewChange(() => {
+      this.renderer.trailsEnabled = false;
+      this.trailsToggle.activated = false;
     });
 
     // Zoom callbacks
@@ -162,9 +186,11 @@ export class App {
     // Initialize preset selector
     this.presetSelector = new Presets.Selector(this.world);
     this.presetSelector.add(new Presets.Empty());
-    this.presetSelector.add(new Presets.SimpleStarSystem());
-    this.presetSelector.add(new Presets.CustomStarSystem());
-    this.presetSelector.finish('simpleStarSystem');
+    this.presetSelector.add(new Presets.Planets());
+    this.presetSelector.add(new Presets.Moons());
+    this.presetSelector.add(new Presets.CustomSimple());
+    this.presetSelector.add(new Presets.CustomBinary());
+    this.presetSelector.finish('planets');
     this.resetButton.setOnClick(() => {
       this.renderer.view.reset();
       this.world.clear();

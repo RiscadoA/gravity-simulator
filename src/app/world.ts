@@ -1,7 +1,6 @@
 import {Body} from './body';
 import {Vec2} from './math';
 import {Renderer} from './renderer';
-import {Color} from './renderer/color';
 
 export const GRAVITY_CONSTANT = 0.000001;
 
@@ -99,7 +98,7 @@ export class World {
    */
   public draw(renderer: Renderer): void {
     for (let i = 0; i < this.bodies.length; i++) {
-      renderer.drawCircle(this.bodies[i].position, this.bodies[i].radius, this.bodies[i].color);
+      renderer.drawCircle(this.bodies[i].position, this.bodies[i].radius, this.bodies[i].color, true);
     }
   }
 }
