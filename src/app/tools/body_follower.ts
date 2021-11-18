@@ -18,6 +18,9 @@ export class BodyFollower extends Tool {
   /** Body being followed. */
   private body: Body|null;
 
+  /** Last body. */
+  private lastBody: Body|null;
+
   /** Callback used. */
   private callback: (body: Body) => void;
 
@@ -30,6 +33,7 @@ export class BodyFollower extends Tool {
     this.world = world;
     this.view = view;
     this.body = null;
+    this.lastBody = null;
     this.callback = this.setBody.bind(this);
   }
 
@@ -38,9 +42,16 @@ export class BodyFollower extends Tool {
   }
 
   public override draw(): void {
+    if (this.body !== this.lastBody) {
+      this.view.triggerViewChange();
+      this.lastBody = this.body;
+    }
+
     if (this.body) {
-      if (this.body.destroyed) this.setBody(null);
-      else this.view.position = this.body.position.mul(-1.0);
+      if (this.body.destroyed)
+        this.setBody(null);
+      else
+        this.view.position = this.body.position.mul(-1.0);
     }
   }
 
@@ -60,6 +71,5 @@ export class BodyFollower extends Tool {
     if (this.body) this.body.removeOnMerge(this.callback);
     this.body = body;
     if (this.body) this.body.addOnMerge(this.callback);
-    this.view.triggerViewChange();
   }
 }
