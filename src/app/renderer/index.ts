@@ -108,6 +108,15 @@ export class Renderer {
 
     // Initialize view.
     this.view = new View(this.canvas.width, this.canvas.height);
+    this.view.setOnViewChange(() => {
+      if (this._trailsEnabled) {
+        // Clear the trails texture.
+        this.context.bindFramebuffer(this.context.FRAMEBUFFER, this.trailsFramebuffer);
+        this.context.viewport(0, 0, this.canvas.width, this.canvas.height);
+        this.context.clearColor(0.0, 0.0, 0.0, 0.0);
+        this.context.clear(this.context.COLOR_BUFFER_BIT);
+      }
+    });
   }
 
   /**
@@ -223,6 +232,13 @@ export class Renderer {
       this.context.clearColor(0.0, 0.0, 0.0, 0.0);
       this.context.clear(this.context.COLOR_BUFFER_BIT);
     }
+  }
+
+  /**
+   * Checks if trails are enabled.
+   */
+  public get trailsEnabled(): boolean {
+    return this._trailsEnabled;
   }
 
   /**
@@ -395,8 +411,7 @@ export class Renderer {
     if (command instanceof DrawCircle) {
       const radius = Math.max(command.radius * TRAIL_THICKNESS_SCALE, TRAIL_MIN_THICKNESS / this.view.scale);
       const translation = Mat3.translation(command.center);
-      const scale =
-          Mat3.scale(new Vec2(radius, radius));
+      const scale = Mat3.scale(new Vec2(radius, radius));
       const transform = scale.mul(translation).mul(this.view.transform);
 
       this.context.uniformMatrix3fv(this.drawTransformUniform, false, transform.elements);

@@ -1,3 +1,4 @@
+import {View} from '../renderer';
 import {Form} from '../ui/form';
 import {World} from '../world';
 
@@ -9,6 +10,9 @@ import {Preset} from './preset';
 export class Selector {
   /** World to affect. */
   private _world: World;
+
+  /** View being used. */
+  private _view: View;
 
   /** Presets available. */
   private _presets: Preset[];
@@ -24,9 +28,11 @@ export class Selector {
 
   /**
    * @param world The world to affect.
+   * @param view View being used.
    */
-  constructor(world: World) {
+  constructor(world: World, view: View) {
     this._world = world;
+    this._view = view;
     this._presets = [];
     this._selected = null;
     this._form = Form.create('selector');
@@ -58,8 +64,7 @@ export class Selector {
   public show(): void {
     if (!this._open) {
       this._form.show();
-      if (this._selected)
-        this._form.setState('preset', this._selected.id);
+      if (this._selected) this._form.setState('preset', this._selected.id);
     }
     this._open = true;
   }
@@ -82,10 +87,11 @@ export class Selector {
 
   /**
    * Applies the last selected preset.
+   * @param view View being used.
    */
   public apply(): void {
     this._world.clear();
-    if (this._selected) this._selected.generate(this._world);
+    if (this._selected) this._selected.generate(this._world, this._view);
   }
 
   /**

@@ -29,7 +29,8 @@ export class CameraMover extends Tool {
   }
 
   public override draw(): void {
-    // Do nothing.
+    if (this.lastPosition)
+      this.view.triggerViewChange();
   }
 
   public override onMouseDown(position: Vec2): void {
@@ -48,5 +49,6 @@ export class CameraMover extends Tool {
     this.lastPosition = position;
 
     this.view.move(delta.mul(SENSIBILITY));
+    this.view.triggerViewChange();
   }
 }

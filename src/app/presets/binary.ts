@@ -1,5 +1,6 @@
 import {Body} from '../body';
 import {Vec2} from '../math';
+import {View} from '../renderer';
 import {GRAVITY_CONSTANT, World} from '../world';
 
 import {Preset} from './preset';
@@ -12,7 +13,10 @@ export class Binary extends Preset {
     super('binary');
   }
 
-  public override generate(world: World): void {
+  public override generate(world: World, view: View): void {
+    view.reset();
+    view.scale = 0.2;
+
     // Get settings from form
     const starsMass = 1000.0;
     const starsDistance = 0.15;
@@ -32,8 +36,8 @@ export class Binary extends Preset {
     const starB = new Body();
     starA.mass = starsMass;
     starB.mass = starsMass;
-    starA.position.x = -starA.radius - starsDistance;
-    starB.position.x = +starB.radius + starsDistance;
+    starA.position = new Vec2(-starA.radius - starsDistance, 0.0);
+    starB.position = new Vec2(+starB.radius + starsDistance, 0.0);
     const reducedMass = starsMass / 2.0;
     starA.velocity = starA.position.perpendicular().normalize().mul(
         Math.sqrt(GRAVITY_CONSTANT * reducedMass / (starA.position.length() * 2)));

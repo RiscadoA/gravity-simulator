@@ -29,6 +29,7 @@ export class World {
    * @param body The body to remove.
    */
   public removeBody(body: Body): void {
+    body.destroyed = true;
     this.bodies.splice(this.bodies.indexOf(body), 1);
   }
 
@@ -48,6 +49,8 @@ export class World {
    * Deletes all bodies in the world.
    */
   public clear(): void {
+    for (let i = 0; i < this.bodies.length; i++)
+      this.bodies[i].destroyed = true;
     this.bodies = [];
   }
 

@@ -1,5 +1,6 @@
 import {Body} from '../body';
 import {Vec2} from '../math';
+import {View} from '../renderer';
 import {GRAVITY_CONSTANT, World} from '../world';
 
 import {Preset} from './preset';
@@ -12,7 +13,10 @@ export class Moons extends Preset {
     super('moons');
   }
 
-  public override generate(world: World): void {
+  public override generate(world: World, view: View): void {
+    view.reset();
+    view.scale = 0.015;
+
     // Add star
     const star = new Body();
     star.mass = 100000.0;

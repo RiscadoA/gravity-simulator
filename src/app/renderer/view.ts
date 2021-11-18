@@ -13,9 +13,6 @@ export class View {
   /** View scale. */
   private _scale: number;
 
-  /** Is the view locked? */
-  private _locked: boolean;
-
   /** Aspect ratio. */
   private aspectRatio: number;
 
@@ -52,10 +49,8 @@ export class View {
    * Sets the view's position.
    */
   public set position(position: Vec2) {
-    if (this._locked) return;
     this._position = position;
     this.updateTransform();
-    this.onViewChangeCallback();
   }
 
   /**
@@ -69,10 +64,8 @@ export class View {
    * Sets the view's scale.
    */
   public set scale(scale: number) {
-    if (this._locked) return;
     this._scale = scale;
     this.updateTransform();
-    this.onViewChangeCallback();
     this.onZoomChangeCallback();
   }
 
@@ -87,9 +80,9 @@ export class View {
    * Resets this view.
    */
   public reset(): void {
-    this.unlock();
     this.position = new Vec2(0.0, 0.0);
-    this.scale = 0.5;
+    this.scale = 1.0;
+    this.triggerViewChange();
   }
 
   /**
@@ -121,6 +114,13 @@ export class View {
   }
 
   /**
+   * Triggers the view change callback.
+   */
+  public triggerViewChange(): void {
+    this.onViewChangeCallback();
+  }
+
+  /**
    * Sets the view change callback.
    * @param callback The callback.
    */
@@ -134,20 +134,6 @@ export class View {
    */
   public setOnZoomChange(callback: () => void): void {
     this.onZoomChangeCallback = callback;
-  }
-
-  /**
-   * Locks the view.
-   */
-  public lock(): void {
-    this._locked = true;
-  }
-
-  /**
-   * Unlocks the view.
-   */
-  public unlock(): void {
-    this._locked = false;
   }
 
   /**

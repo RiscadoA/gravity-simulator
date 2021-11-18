@@ -1,3 +1,4 @@
+import {View} from '../renderer';
 import {Form} from '../ui/form';
 import {World} from '../world';
 
@@ -37,6 +38,7 @@ export abstract class Preset {
   /**
    * Initialize the preset.
    * @param world World to generate.
+   * @param view View being used.
    */
-  public abstract generate(world: World): void;
+  public abstract generate(world: World, view: View): void;
 }

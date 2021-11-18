@@ -1,3 +1,4 @@
+import {View} from '../renderer';
 import {World} from '../world';
 
 import {Preset} from './preset';
@@ -10,7 +11,7 @@ export class Empty extends Preset {
     super('empty');
   }
 
-  public override generate(_: World): void {
+  public override generate(_1: World, _2: View): void {
     // Do nothing
   }
 }

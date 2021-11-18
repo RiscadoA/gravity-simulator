@@ -18,6 +18,9 @@ export class BodyMover extends Tool {
   /** Body being moved. */
   private body: Body|null;
 
+  /** Callback. */
+  private callback: (body: Body) => void;
+
   /**
    * @param world The world whoose bodies will be moved.
    * @param view The view being used to render.
@@ -26,6 +29,7 @@ export class BodyMover extends Tool {
     super();
     this.world = world;
     this.view = view;
+    this.callback = this.setBody.bind(this);
   }
 
   public override activate(): void {
@@ -54,7 +58,7 @@ export class BodyMover extends Tool {
 
   private setBody(body: Body|null): void {
     if (this.body) {
-      this.body.setOnMerge((_) => {});
+      this.body.removeOnMerge(this.callback);
       this.body.static = false;
     }
 
@@ -62,7 +66,7 @@ export class BodyMover extends Tool {
 
     if (this.body) {
       this.body.static = true;
-      this.body?.setOnMerge(this.setBody.bind(this));
+      this.body?.addOnMerge(this.callback);
     }
   }
 }

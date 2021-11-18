@@ -1,5 +1,6 @@
 import {Body} from '../body';
 import {Vec2} from '../math';
+import {View} from '../renderer';
 import {Form} from '../ui/form';
 import {GRAVITY_CONSTANT, World} from '../world';
 
@@ -22,7 +23,9 @@ export class CustomBinary extends Preset {
     super('customBinary', form);
   }
 
-  public override generate(world: World): void {
+  public override generate(world: World, view: View): void {
+    view.reset();
+
     // Get settings from form
     const starsMass = this.form!.getValue('starsMass');
     const starsDistance = this.form!.getValue('starsDistance');
@@ -42,8 +45,8 @@ export class CustomBinary extends Preset {
     const starB = new Body();
     starA.mass = starsMass;
     starB.mass = starsMass;
-    starA.position.x = -starA.radius - starsDistance;
-    starB.position.x = +starB.radius + starsDistance;
+    starA.position = new Vec2(-starA.radius - starsDistance, 0.0);
+    starB.position = new Vec2(+starB.radius + starsDistance, 0.0);
     const reducedMass = starsMass / 2.0;
     starA.velocity = starA.position.perpendicular().normalize().mul(
         Math.sqrt(GRAVITY_CONSTANT * reducedMass / (starA.position.length() * 2)));

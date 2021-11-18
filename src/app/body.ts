@@ -20,8 +20,10 @@ export class Body {
   public color: Color;
   /** Is the body static? */
   public static: boolean;
-  /** Merge callback. */
-  private onMergeCallback: (body: Body) => void;
+  /** Has the body been destroyed? */
+  public destroyed: boolean;
+  /** Merge callbacks. */
+  private onMergeCallbacks: {(body: Body): void;}[];
 
   /**
    * @param mass The body's initial mass.
@@ -34,14 +36,15 @@ export class Body {
     this.position = new Vec2(0.0, 0.0);
     this.velocity = new Vec2(0.0, 0.0);
     this.color = Color.random().mul(0.8).add(new Color(0.2, 0.2, 0.2));
-    this.onMergeCallback = (_) => {};
+    this.destroyed = false;
+    this.onMergeCallbacks = [];
   }
 
   /**
    * Gets the body's position.
    */
   public get position(): Vec2 {
-    return this._position;
+    return this._position.clone();
   }
 
   /**
@@ -142,8 +145,17 @@ export class Body {
    * Sets the merge callback.
    * @param callback The callback.
    */
-  public setOnMerge(callback: (body: Body) => void): void {
-    this.onMergeCallback = callback;
+  public addOnMerge(callback: (body: Body) => void): void {
+    this.onMergeCallbacks.push(callback);
+  }
+
+  /**
+   * Removes a merge callback.
+   * @param callback The callback.
+   */
+  public removeOnMerge(callback: (body: Body) => void): void {
+    const index = this.onMergeCallbacks.indexOf(callback);
+    if (index >= 0) this.onMergeCallbacks.splice(index, 1);
   }
 
   /**
@@ -162,8 +174,9 @@ export class Body {
     const colorB = other.color.mul(other.mass / b.mass);
     b.color = colorA.add(colorB);
 
-    other.onMergeCallback(b);
-    this.onMergeCallback(b);
+    this.destroyed = true;
+    for (const c of other.onMergeCallbacks) c(b);
+    for (const c of this.onMergeCallbacks) c(b);
     return b;
   }
 }

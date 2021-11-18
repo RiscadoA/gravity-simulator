@@ -1,5 +1,6 @@
 import {Body} from '../body';
 import {Vec2} from '../math';
+import {View} from '../renderer';
 import {Form} from '../ui/form';
 import {GRAVITY_CONSTANT, World} from '../world';
 
@@ -21,7 +22,9 @@ export class CustomSimple extends Preset {
     super('customSimple', form);
   }
 
-  public override generate(world: World): void {
+  public override generate(world: World, view: View): void {
+    view.reset();
+
     // Get settings from form
     const starMass = this.form!.getValue('starMass');
     const bodyCount = this.form!.getValue('bodyCount');
@@ -29,7 +32,7 @@ export class CustomSimple extends Preset {
     const bodyMassSpread = this.form!.getValue('bodyMassSpread');
     const bodyDistance = this.form!.getValue('bodyDistance');
     const bodyDistanceSpread = this.form!.getValue('bodyDistanceSpread');
-    
+
     const bodyMinMass = Math.max(0.01, bodyMass * (1.0 - bodyMassSpread));
     const bodyMaxMass = bodyMass * (1.0 + bodyMassSpread);
     const bodyMinDistance = bodyDistance * (1.0 - bodyDistanceSpread);
@@ -46,7 +49,8 @@ export class CustomSimple extends Preset {
       body.mass = Math.random() * (bodyMaxMass - bodyMinMass) + bodyMinMass;
 
       const angle = Math.random() * Math.PI * 2;
-      const distance = Math.random() * (bodyMaxDistance - bodyMinDistance) + bodyMinDistance + star.radius + body.radius;
+      const distance =
+          Math.random() * (bodyMaxDistance - bodyMinDistance) + bodyMinDistance + star.radius + body.radius;
       body.position = new Vec2(Math.cos(angle) * distance, Math.sin(angle) * distance);
       body.velocity = body.position.perpendicular().normalize().mul(Math.sqrt(GRAVITY_CONSTANT * starMass / distance));
       world.addBody(body);

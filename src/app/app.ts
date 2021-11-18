@@ -60,6 +60,9 @@ export class App {
   /** Camera mover toggle. */
   private cameraMoverToggle: UI.Toggle;
 
+  /** Body follower toggle. */
+  private bodyFollowerToggle: UI.Toggle;
+
   /** Tools switch. */
   private toolSwitch: UI.Switch;
 
@@ -107,6 +110,7 @@ export class App {
     canvas.addEventListener('wheel', (event: WheelEvent) => {
       this.renderer.view.zoom(event.deltaY > 0 ? 1.1 : 0.9);
       event.preventDefault();
+      this.renderer.view.triggerViewChange();
     });
 
     // Initialize UI sliders
@@ -130,6 +134,7 @@ export class App {
     this.bodyRemoverToggle = new UI.Toggle(document.getElementById('bodyRemoverToggle') as HTMLButtonElement);
     this.bodyMoverToggle = new UI.Toggle(document.getElementById('bodyMoverToggle') as HTMLButtonElement);
     this.cameraMoverToggle = new UI.Toggle(document.getElementById('cameraMoverToggle') as HTMLButtonElement);
+    this.bodyFollowerToggle = new UI.Toggle(document.getElementById('bodyFollowerToggle') as HTMLButtonElement);
 
     // Initialize tools
     this.tools = new Map<string, Tools.Tool>();
@@ -137,6 +142,7 @@ export class App {
     this.tools.set('bodyRemover', new Tools.BodyRemover(this.world, this.renderer.view));
     this.tools.set('bodyMover', new Tools.BodyMover(this.world, this.renderer.view));
     this.tools.set('cameraMover', new Tools.CameraMover(this.renderer.view));
+    this.tools.set('bodyFollower', new Tools.BodyFollower(this.world, this.renderer.view));
     this.tool = undefined;
 
     // Intiailize UI tool switch
@@ -145,37 +151,28 @@ export class App {
     this.toolSwitch.add('bodyRemover', this.bodyRemoverToggle);
     this.toolSwitch.add('bodyMover', this.bodyMoverToggle);
     this.toolSwitch.add('cameraMover', this.cameraMoverToggle);
+    this.toolSwitch.add('bodyFollower', this.bodyFollowerToggle);
     this.toolSwitch.setOnStateChange(tool => {
       this.tool = this.tools.get(tool);
       if (this.tool) this.tool.activate();
-      if (tool == 'cameraMover') {
-        this.renderer.view.unlock();
-        this.renderer.trailsEnabled = false;
-        this.trailsToggle.activated = false;
-      }
     });
 
     // Trails callbacks
     this.trailsToggle.setOnActivated(() => {
-      this.renderer.view.lock();
       this.renderer.trailsEnabled = true;
-      if (this.toolSwitch.current == 'cameraMover') this.toolSwitch.current = '';
     });
     this.trailsToggle.setOnDeactivated(() => {
       this.renderer.trailsEnabled = false;
-      this.renderer.view.unlock();
-    });
-    this.renderer.view.setOnViewChange(() => {
-      this.renderer.trailsEnabled = false;
-      this.trailsToggle.activated = false;
     });
 
     // Zoom callbacks
     this.zoomInButton.setOnClick(() => {
       this.renderer.view.zoom(0.75);
+      this.renderer.view.triggerViewChange();
     });
     this.zoomOutButton.setOnClick(() => {
       this.renderer.view.zoom(1.25);
+      this.renderer.view.triggerViewChange();
     });
 
     // Help callback
@@ -184,7 +181,7 @@ export class App {
     });
 
     // Initialize preset selector
-    this.presetSelector = new Presets.Selector(this.world);
+    this.presetSelector = new Presets.Selector(this.world, this.renderer.view);
     this.presetSelector.add(new Presets.Empty());
     this.presetSelector.add(new Presets.Planets());
     this.presetSelector.add(new Presets.Moons());
@@ -193,7 +190,6 @@ export class App {
     this.presetSelector.add(new Presets.CustomBinary());
     this.presetSelector.finish('planets');
     this.resetButton.setOnClick(() => {
-      this.renderer.view.reset();
       this.world.clear();
       this.presetSelector.apply();
     });
