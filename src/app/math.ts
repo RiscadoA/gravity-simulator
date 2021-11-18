@@ -17,6 +17,14 @@ export class Vec2 {
   }
 
   /**
+   * Clones this 2D vector.
+   * @returns The new vector.
+   */
+  public clone(): Vec2 {
+    return new Vec2(this.x, this.y);
+  }
+
+  /**
    * Adds this and another 2D vector and returns the result.
    * @param v Other 2D vector.
    * @returns The result 2D vector.
