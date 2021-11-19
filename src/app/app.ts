@@ -3,6 +3,7 @@ import * as Presets from './presets';
 import {Renderer} from './renderer';
 import * as Tools from './tools';
 import * as UI from './ui';
+import {Form} from './ui/form';
 import {World} from './world';
 
 /** Multiplier of the time step passed to the update functions. */
@@ -20,6 +21,9 @@ export class App {
 
   /** Physics world. */
   private world: World;
+
+  /** Introduction form. */
+  private introduction: Form;
 
   /** Tools map. */
   private tools: Map<string, Tools.Tool>;
@@ -154,6 +158,7 @@ export class App {
     this.toolSwitch.add('bodyFollower', this.bodyFollowerToggle);
     this.toolSwitch.setOnStateChange(tool => {
       this.tool = this.tools.get(tool);
+      this.introduction.hide();
       if (this.tool) this.tool.activate();
     });
 
@@ -190,16 +195,23 @@ export class App {
     this.presetSelector.add(new Presets.CustomBinary());
     this.presetSelector.finish('planets');
     this.resetButton.setOnClick(() => {
+      this.introduction.hide();
       this.world.clear();
       this.presetSelector.apply();
     });
     this.settingsButton.setOnClick(() => {
+      this.introduction.hide();
       if (this.presetSelector.open)
         this.presetSelector.hide();
       else
         this.presetSelector.show();
     });
     this.presetSelector.apply();
+
+    // Initialize introduction
+    this.introduction = Form.create('introduction');
+    this.introduction.show();
+    this.introduction.setOnSubmit(() => this.introduction.hide());
   }
 
   /**

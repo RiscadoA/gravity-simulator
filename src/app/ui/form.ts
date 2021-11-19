@@ -19,7 +19,7 @@ export class Form {
   private _root: HTMLElement;
 
   /** The form's cancel button. */
-  private _cancel: Button;
+  private _cancel: Button|null;
 
   /** The form's submit button. */
   private _submit: Button;
@@ -30,7 +30,11 @@ export class Form {
   constructor(root: HTMLElement) {
     this._fields = new Map<string, FormField>();
     this._root = root;
-    this._cancel = new Button(this._root.querySelector('#cancel') as HTMLButtonElement);
+    const cancel = this._root.querySelector('#cancel') as HTMLButtonElement;
+    if (cancel)
+      this._cancel = new Button(cancel);
+    else
+      this._cancel = null;
     this._submit = new Button(this._root.querySelector('#submit') as HTMLButtonElement);
   }
 
@@ -144,7 +148,7 @@ export class Form {
    * @param callback The callback.
    */
   public setOnCancel(callback: () => void) {
-    this._cancel.setOnClick(callback);
+    if (this._cancel) this._cancel.setOnClick(callback);
   }
 
   /**
