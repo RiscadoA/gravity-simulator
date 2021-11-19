@@ -477,6 +477,7 @@ var _presets = require("./presets");
 var _renderer = require("./renderer");
 var _tools = require("./tools");
 var _ui = require("./ui");
+var _form = require("./ui/form");
 var _world = require("./world");
 /** Multiplier of the time step passed to the update functions. */ const TIME_SCALE = 0.000002;
 /** Help page URL. */ const HELP_URL = 'https://riscadoa.com/portfolio/gravity-simulator/';
@@ -550,6 +551,7 @@ class App {
         this.toolSwitch.add('bodyFollower', this.bodyFollowerToggle);
         this.toolSwitch.setOnStateChange((tool)=>{
             this.tool = this.tools.get(tool);
+            this.introduction.hide();
             if (this.tool) this.tool.activate();
         });
         // Trails callbacks
@@ -582,14 +584,21 @@ class App {
         this.presetSelector.add(new _presets.CustomBinary());
         this.presetSelector.finish('planets');
         this.resetButton.setOnClick(()=>{
+            this.introduction.hide();
             this.world.clear();
             this.presetSelector.apply();
         });
         this.settingsButton.setOnClick(()=>{
+            this.introduction.hide();
             if (this.presetSelector.open) this.presetSelector.hide();
             else this.presetSelector.show();
         });
         this.presetSelector.apply();
+        // Initialize introduction
+        this.introduction = _form.Form.create('introduction');
+        this.introduction.show();
+        this.introduction.setOnSubmit(()=>this.introduction.hide()
+        );
     }
     /**
    * Starts the application's main loop.
@@ -626,7 +635,7 @@ class App {
     }
 }
 
-},{"./math":"9zUrS","./presets":"b365J","./renderer":"bK5TX","./tools":"acJ2D","./ui":"eFpQJ","./world":"8br0T","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV"}],"9zUrS":[function(require,module,exports) {
+},{"./math":"9zUrS","./presets":"b365J","./renderer":"bK5TX","./tools":"acJ2D","./ui":"eFpQJ","./world":"8br0T","@parcel/transformer-js/src/esmodule-helpers.js":"ciiiV","./ui/form":"lTd4l"}],"9zUrS":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 /**
@@ -1052,7 +1061,9 @@ class Form {
    */ constructor(root){
         this._fields = new Map();
         this._root = root;
-        this._cancel = new _button.Button(this._root.querySelector('#cancel'));
+        const cancel = this._root.querySelector('#cancel');
+        if (cancel) this._cancel = new _button.Button(cancel);
+        else this._cancel = null;
         this._submit = new _button.Button(this._root.querySelector('#submit'));
     }
     /**
@@ -1138,7 +1149,7 @@ class Form {
    * Sets the form cancelled callback.
    * @param callback The callback.
    */ setOnCancel(callback) {
-        this._cancel.setOnClick(callback);
+        if (this._cancel) this._cancel.setOnClick(callback);
     }
     /**
    * Sets the form submitted callback.
